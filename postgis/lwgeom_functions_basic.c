@@ -141,8 +141,9 @@ Datum postgis_version(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(postgis_lib_version);
 Datum postgis_lib_version(PG_FUNCTION_ARGS)
 {
-	char *ver = POSTGIS_LIB_VERSION;
-	text *result = cstring2text(ver);
+	char str[256];
+        snprintf(str, 256, "%s.%s", POSTGIS_LIB_VERSION, CARTODB_MICRO_VERSION);
+	text *result = cstring2text(str);
 	PG_RETURN_TEXT_P(result);
 }
 
