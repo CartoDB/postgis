@@ -1377,6 +1377,18 @@ CREATE OR REPLACE FUNCTION ST_AsEWKB(geometry)
 	AS 'MODULE_PATHNAME','WKBFromLWGEOM'
 	LANGUAGE 'c' IMMUTABLE STRICT;
 
+
+CREATE OR REPLACE FUNCTION ST_AsTWKB(geom geometry, prec int4 default NULL, prec_z int4 default NULL, prec_m int4 default NULL, with_sizes boolean default NULL, with_boxes boolean default NULL)
+        RETURNS bytea
+        AS 'MODULE_PATHNAME','TWKBFromLWGEOM'
+        LANGUAGE 'c' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION ST_AsTWKB(geom geometry[], ids bigint[], prec int4 default NULL, prec_z int4 default NULL, prec_m int4 default NULL, with_sizes boolean default NULL, with_boxes boolean default NULL)
+        RETURNS bytea
+        AS 'MODULE_PATHNAME','TWKBFromLWGEOMArray'
+        LANGUAGE 'c' IMMUTABLE;
+
+
 -- Availability: 1.2.2
 CREATE OR REPLACE FUNCTION ST_AsHEXEWKB(geometry)
 	RETURNS TEXT
