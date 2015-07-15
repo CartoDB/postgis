@@ -1,0 +1,21 @@
+EXTENSION = postgis_backport
+DATA = postgis_backport--2.1a.sql
+
+# 
+# Leave the below alone
+#
+
+PG_CONFIG = @PG_CONFIG@
+PERL = @PERL@
+MINOR_VERSION = @POSTGIS_MAJOR_VERSION@.@POSTGIS_MINOR_VERSION@
+BACKPORT_FULL_VERSION = $(MINOR_VERSION)$(BACKPORT_VERSION)
+
+EXTRA_CLEAN = $(DATA)
+
+PGXS := $(shell $(PG_CONFIG) --pgxs)
+include $(PGXS)
+
+%.sql: %.sql.in
+	$(PERL) -lpe "s'MODULE_PATHNAME'\$$libdir/postgis-@POSTGIS_MAJOR_VERSION@.@POSTGIS_MINOR_VERSION@'g" < $< > $@
+
+all: $(DATA)

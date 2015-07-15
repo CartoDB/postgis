@@ -1,0 +1,15 @@
+
+CREATE OR REPLACE FUNCTION ST_AsTWKB(geom geometry, prec int4 default NULL, prec_z int4 default NULL, prec_m int4 default NULL, with_sizes boolean default NULL, with_boxes boolean default NULL)
+  RETURNS bytea
+  AS 'MODULE_PATHNAME','TWKBFromLWGEOM'
+  LANGUAGE 'c' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION ST_AsTWKB(geom geometry[], ids bigint[], prec int4 default NULL, prec_z int4 default NULL, prec_m int4 default NULL, with_sizes boolean default NULL, with_boxes boolean default NULL)
+  RETURNS bytea
+  AS 'MODULE_PATHNAME','TWKBFromLWGEOMArray'
+  LANGUAGE 'c' IMMUTABLE;
+
+CREATE OR REPLACE FUNCTION ST_GeomFromTWKB(bytea)
+  RETURNS geometry
+  AS 'MODULE_PATHNAME','LWGEOMFromTWKB'
+  LANGUAGE 'c' IMMUTABLE STRICT;

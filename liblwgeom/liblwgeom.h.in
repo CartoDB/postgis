@@ -1778,6 +1778,17 @@ LWGEOM_UNPARSER_RESULT;
 #define WKT_EXTENDED 0x04
 
 /*
+** Variants available for TWKB
+*/
+#define TWKB_BBOX 0x01 /* User wants bboxes */
+#define TWKB_SIZE 0x02 /* User wants sizes */
+#define TWKB_ID 0x04 /* User wants id */
+#define TWKB_NO_TYPE 0x10 /* No type because it is a sub geoemtry */
+#define TWKB_NO_ID 0x20 /* No ID because it is a subgeoemtry */
+#define TWKB_DEFAULT_PRECISION 0 /* Aim for 1m (or ft) rounding by default */
+
+
+/*
 ** New parsing and unparsing functions.
 */
 
@@ -1841,6 +1852,25 @@ extern void lwfree(void *mem);
 
 /* Utilities */
 extern char *lwmessage_truncate(char *str, int startpos, int endpos, int maxlength, int truncdirection);
+
+/*
+* TWKB functions
+*/
+
+/**
+ * @param check parser check flags, see LW_PARSER_CHECK_* macros
+ * @param size parser check flags, see LW_PARSER_CHECK_* macros
+ */
+extern LWGEOM* lwgeom_from_twkb(uint8_t *twkb, size_t twkb_size, char check);
+
+/**
+ * @param geom input geometry
+ * @param variant what variations on TWKB are requested?
+ * @param twkb_size returns the length of the output TWKB in bytes if set
+ */
+extern uint8_t* lwgeom_to_twkb(const LWGEOM *geom, uint8_t variant, int8_t precision_xy, int8_t precision_z, int8_t precision_m, size_t *twkb_size);
+
+extern uint8_t* lwgeom_to_twkb_with_idlist(const LWGEOM *geom, int64_t *idlist, uint8_t variant, int8_t precision_xy, int8_t precision_z, int8_t precision_m, size_t *twkb_size);
 
 /*******************************************************************************
  * SQLMM internal functions - TODO: Move into separate header files
