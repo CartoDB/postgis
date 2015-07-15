@@ -897,27 +897,56 @@ static void test_geohash_point_as_int(void)
 
 static void test_lwgeom_simplify(void)
 {
-		LWGEOM *l;
-		LWGEOM *i;
-		char *ewkt;
+	LWGEOM *l, *i;
+	char *ewkt;
 
-		/* Not simplifiable */
-		i = lwgeom_from_wkt("LINESTRING(0 0, 50 1.00001, 100 0)", LW_PARSER_CHECK_NONE);
-		l = lwgeom_simplify(i, 1.0);
-		ewkt = lwgeom_to_ewkt(l);
-		CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(0 0,50 1.00001,100 0)");
-		lwgeom_free(l);
-		lwgeom_free(i);
-		lwfree(ewkt);
+	/* Simplify but only so far... */
+	i = lwgeom_from_wkt("LINESTRING(0 0, 1 0, 1 1, 0 1, 0 0)", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 10, LW_TRUE);
+	ewkt = lwgeom_to_ewkt(l);
+	CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(0 0,0 0)");
+	lwgeom_free(l);
+	lwgeom_free(i);
+	lwfree(ewkt);
 
-		/* Simplifiable */
-		i = lwgeom_from_wkt("LINESTRING(0 0,50 0.99999,100 0)", LW_PARSER_CHECK_NONE);
-		l = lwgeom_simplify(i, 1.0);
-		ewkt = lwgeom_to_ewkt(l);
-		CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(0 0,100 0)");
-		lwgeom_free(l);
-		lwgeom_free(i);
-		lwfree(ewkt);
+	/* Simplify but only so far... */
+	i = lwgeom_from_wkt("POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 10, LW_TRUE);
+	ewkt = lwgeom_to_ewkt(l);
+	CU_ASSERT_STRING_EQUAL(ewkt, "POLYGON((0 0,1 0,1 1,0 0))");
+	lwgeom_free(l);
+	lwgeom_free(i);
+	lwfree(ewkt);
+
+	/* Simplify and collapse */
+	i = lwgeom_from_wkt("LINESTRING(0 0, 1 0, 1 1, 0 1, 0 0)", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 10, LW_FALSE);
+	CU_ASSERT_EQUAL(l, NULL);
+	lwgeom_free(i);
+
+	/* Simplify and collapse */
+	i = lwgeom_from_wkt("POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 10, LW_FALSE);
+	CU_ASSERT_EQUAL(l, NULL);
+	lwgeom_free(i);
+
+	/* Not simplifiable */
+	i = lwgeom_from_wkt("LINESTRING(0 0, 50 1.00001, 100 0)", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 1.0, LW_FALSE);
+	ewkt = lwgeom_to_ewkt(l);
+	CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(0 0,50 1.00001,100 0)");
+	lwgeom_free(l);
+	lwgeom_free(i);
+	lwfree(ewkt);
+
+	/* Simplifiable */
+	i = lwgeom_from_wkt("LINESTRING(0 0,50 0.99999,100 0)", LW_PARSER_CHECK_NONE);
+	l = lwgeom_simplify(i, 1.0, LW_FALSE);
+	ewkt = lwgeom_to_ewkt(l);
+	CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(0 0,100 0)");
+	lwgeom_free(l);
+	lwgeom_free(i);
+	lwfree(ewkt);
 }
 
 /*

@@ -890,7 +890,7 @@ extern LWGEOM* lwgeom_force_3dz(const LWGEOM *geom);
 extern LWGEOM* lwgeom_force_3dm(const LWGEOM *geom);
 extern LWGEOM* lwgeom_force_4d(const LWGEOM *geom);
 
-extern LWGEOM* lwgeom_simplify(const LWGEOM *igeom, double dist);
+extern LWGEOM* lwgeom_simplify(const LWGEOM *igeom, double dist, int preserve_collapsed);
 
 /* 
  * Force to use SFS 1.1 geometry type
