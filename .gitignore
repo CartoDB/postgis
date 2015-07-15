@@ -42,6 +42,7 @@ extensions/postgis_topology/Makefile
 extensions/postgis_topology/postgis_topology.control
 extensions/postgis_topology/sql/
 extensions/postgis_topology/sql_bits/*.sql
+extensions/postgis_backport/*.sql
 GNUmakefile
 java/jdbc/Makefile
 java/jdbc/lib/
