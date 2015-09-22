@@ -3065,6 +3065,12 @@ CREATE OR REPLACE FUNCTION ST_RemoveRepeatedPoints(geometry)
        LANGUAGE 'c' IMMUTABLE STRICT
        COST 100;
 
+CREATE OR REPLACE FUNCTION ST_RemoveRepeatedPoints(geom geometry, tolerance float8)
+       RETURNS geometry
+       AS 'MODULE_PATHNAME', 'ST_RemoveRepeatedPoints'
+       LANGUAGE 'c' IMMUTABLE STRICT
+       COST 100;
+
 --------------------------------------------------------------------------------
 -- ST_CleanGeometry / ST_MakeValid
 --------------------------------------------------------------------------------
