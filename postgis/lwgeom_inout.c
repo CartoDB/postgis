@@ -14,11 +14,15 @@
 
 #include "fmgr.h"
 #include "utils/elog.h"
+#include "utils/array.h"
+#include "utils/lsyscache.h"
+#include "funcapi.h"
 #include "mb/pg_wchar.h"
 # include "lib/stringinfo.h" /* for binary input */
 
 #include "liblwgeom.h"
 #include "lwgeom_pg.h"
+#include "lwgeom_transform.h"
 #include "geography.h" /* for lwgeom_valid_typmod */
 
 void elog_ERROR(const char* string);
@@ -33,13 +37,16 @@ Datum parse_WKT_lwgeom(PG_FUNCTION_ARGS);
 Datum LWGEOM_recv(PG_FUNCTION_ARGS);
 Datum LWGEOM_send(PG_FUNCTION_ARGS);
 Datum LWGEOM_to_latlon(PG_FUNCTION_ARGS);
+Datum TWKBFromLWGEOM(PG_FUNCTION_ARGS);
+Datum TWKBFromLWGEOMArray(PG_FUNCTION_ARGS);
+Datum LWGEOMFromTWKB(PG_FUNCTION_ARGS);
 
 
 /*
  * LWGEOM_in(cstring)
  * format is '[SRID=#;]wkt|wkb'
  *  LWGEOM_in( 'SRID=99;POINT(0 0)')
- *  LWGEOM_in( 'POINT(0 0)')            --> assumes SRID=SRID_UNKNOWN
+ *  LWGEOM_in( 'POINT(0 0)')	    --> assumes SRID=SRID_UNKNOWN
  *  LWGEOM_in( 'SRID=99;0101000000000000000000F03F000000000000004')
  *  LWGEOM_in( '0101000000000000000000F03F000000000000004')
  *  returns a GSERIALIZED object
@@ -139,8 +146,8 @@ Datum LWGEOM_in(PG_FUNCTION_ARGS)
 /*
  * LWGEOM_to_latlon(GEOMETRY, text)
  *  NOTE: Geometry must be a point.  It is assumed that the coordinates
- *        of the point are in a lat/lon projection, and they will be
- *        normalized in the output to -90-90 and -180-180.
+ *	of the point are in a lat/lon projection, and they will be
+ *	normalized in the output to -90-90 and -180-180.
  *
  *  The text parameter is a format string containing the format for the
  *  resulting text, similar to a date format string.  Valid tokens
@@ -356,6 +363,250 @@ Datum LWGEOMFromWKB(PG_FUNCTION_ARGS)
 }
 
 /*
+ * LWGEOMFromTWKB(wkb)
+ * NOTE: twkb is in *binary* not hex form.
+ *
+ */
+PG_FUNCTION_INFO_V1(LWGEOMFromTWKB);
+Datum LWGEOMFromTWKB(PG_FUNCTION_ARGS)
+{
+	bytea *bytea_twkb = (bytea*)PG_GETARG_BYTEA_P(0);
+	GSERIALIZED *geom;
+	LWGEOM *lwgeom;
+	uint8_t *twkb = (uint8_t*)VARDATA(bytea_twkb);
+	
+	lwgeom = lwgeom_from_twkb(twkb, VARSIZE(bytea_twkb)-VARHDRSZ, LW_PARSER_CHECK_ALL);
+
+	if ( lwgeom_needs_bbox(lwgeom) )
+		lwgeom_add_bbox(lwgeom);
+
+	geom = geometry_serialize(lwgeom);
+	lwgeom_free(lwgeom);
+	PG_FREE_IF_COPY(bytea_twkb, 0);
+	PG_RETURN_POINTER(geom);
+}
+
+PG_FUNCTION_INFO_V1(TWKBFromLWGEOM);
+Datum TWKBFromLWGEOM(PG_FUNCTION_ARGS)
+{
+	GSERIALIZED *geom;
+	LWGEOM *lwgeom;
+	uint8_t *twkb;
+	size_t twkb_size;
+	uint8_t variant = 0;
+	bytea *result;
+	srs_precision sp;
+	
+	/*check for null input since we cannot have the sql-function as strict. 
+	That is because we use null as default for optional ID*/	
+	if ( PG_ARGISNULL(0) ) PG_RETURN_NULL();
+	
+	geom = (GSERIALIZED *) PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
+
+	/* Read sensible precision defaults (about one meter) given the srs */
+	sp = srid_axis_precision(fcinfo, gserialized_get_srid(geom), TWKB_DEFAULT_PRECISION);
+	
+	/* If user specified XY precision, use it */
+	if ( PG_NARGS() > 1 && ! PG_ARGISNULL(1) )
+		sp.precision_xy = PG_GETARG_INT32(1);
+
+	/* If user specified Z precision, use it */
+	if ( PG_NARGS() > 2 && ! PG_ARGISNULL(2) )
+		sp.precision_z = PG_GETARG_INT32(2);
+
+	/* If user specified M precision, use it */
+	if ( PG_NARGS() > 3 && ! PG_ARGISNULL(3) )
+		sp.precision_m = PG_GETARG_INT32(3);
+
+	/* We don't permit ids for single geoemtries */
+	variant = variant & ~TWKB_ID;
+
+	/* If user wants registered twkb sizes */
+	if ( PG_NARGS() > 4 && ! PG_ARGISNULL(4) && PG_GETARG_BOOL(4) )
+		variant |= TWKB_SIZE;
+	
+	/* If user wants bounding boxes */
+	if ( PG_NARGS() > 5 && ! PG_ARGISNULL(5) && PG_GETARG_BOOL(5) )
+		variant |= TWKB_BBOX;
+
+	/* Create TWKB binary string */
+	lwgeom = lwgeom_from_gserialized(geom);
+	twkb = lwgeom_to_twkb(lwgeom, variant, sp.precision_xy, sp.precision_z, sp.precision_m, &twkb_size);
+	lwgeom_free(lwgeom);
+	
+	/* Prepare the PgSQL text return type */
+	result = palloc(twkb_size + VARHDRSZ);
+	memcpy(VARDATA(result), twkb, twkb_size);
+	SET_VARSIZE(result, twkb_size + VARHDRSZ);
+	
+	pfree(twkb);
+	PG_FREE_IF_COPY(geom, 0);
+	PG_RETURN_BYTEA_P(result);
+}
+
+PG_FUNCTION_INFO_V1(TWKBFromLWGEOMArray);
+Datum TWKBFromLWGEOMArray(PG_FUNCTION_ARGS)
+{
+	ArrayType *arr_geoms = NULL;
+	ArrayType *arr_ids = NULL;
+	int num_geoms, num_ids, i = 0;
+
+	ArrayIterator iter_geoms, iter_ids;
+	bool null_geom, null_id;
+	Datum val_geom, val_id;
+
+	int is_homogeneous = true;
+	int subtype = 0;
+	int has_z = 0;
+	int has_m  = 0;
+	LWCOLLECTION *col = NULL;
+	int64_t *idlist = NULL;
+	uint8_t variant = 0;
+
+	srs_precision sp;
+	uint8_t *twkb;
+	size_t twkb_size;
+	bytea *result;
+
+	/* The first two arguments are required */
+	if ( PG_NARGS() < 2 || PG_ARGISNULL(0) || PG_ARGISNULL(1) ) 
+		PG_RETURN_NULL();
+
+	arr_geoms = PG_GETARG_ARRAYTYPE_P(0);
+	arr_ids = PG_GETARG_ARRAYTYPE_P(1);
+
+	num_geoms = ArrayGetNItems(ARR_NDIM(arr_geoms), ARR_DIMS(arr_geoms));
+	num_ids = ArrayGetNItems(ARR_NDIM(arr_ids), ARR_DIMS(arr_ids));
+	
+	if ( num_geoms != num_ids )
+	{
+		elog(ERROR, "size of geometry[] and integer[] arrays must match");
+		PG_RETURN_NULL();
+	}
+
+	/* Loop through array and build a collection of geometry and */
+	/* a simple array of ids. If either side is NULL, skip it */
+
+#if POSTGIS_PGSQL_VERSION >= 95 
+	iter_geoms = array_create_iterator(arr_geoms, 0, NULL);
+	iter_ids = array_create_iterator(arr_ids, 0, NULL);
+#else
+	iter_geoms = array_create_iterator(arr_geoms, 0);
+	iter_ids = array_create_iterator(arr_ids, 0);
+#endif
+
+	while( array_iterate(iter_geoms, &val_geom, &null_geom) && 
+	       array_iterate(iter_ids, &val_id, &null_id) )
+	{
+		LWGEOM *geom;
+		int32_t uid;
+
+		if ( null_geom || null_id )
+		{
+			elog(NOTICE, "ST_AsTWKB skipping NULL entry at position %d", i);
+			continue;
+		}
+
+		geom = lwgeom_from_gserialized((GSERIALIZED*)DatumGetPointer(val_geom));
+		uid = DatumGetInt64(val_id);
+		
+		/* Construct collection/idlist first time through */
+		if ( ! col )
+		{
+			has_z = lwgeom_has_z(geom);
+			has_m = lwgeom_has_m(geom);
+			col = lwcollection_construct_empty(COLLECTIONTYPE, lwgeom_get_srid(geom), has_z, has_m);
+		}
+		if ( ! idlist ) 
+			idlist = palloc0(num_geoms * sizeof(int64_t));
+
+		
+		/*Check if there is differences in dimmenstionality*/
+		if( lwgeom_has_z(geom)!=has_z || lwgeom_has_m(geom)!=has_m)
+		{
+			elog(ERROR, "Geometries have differenct dimensionality");
+			PG_FREE_IF_COPY(arr_geoms, 0);
+			PG_FREE_IF_COPY(arr_ids, 1);
+			PG_RETURN_NULL();		       
+		}
+		/* Store the values */
+		lwcollection_add_lwgeom(col, geom);
+		idlist[i++] = uid;
+		
+		/* Grab the geometry type and note if all geometries share it */
+		/* If so, we can make this a homogeneous collection and save some space */
+		if ( lwgeom_get_type(geom) != subtype && subtype )
+		{
+			is_homogeneous = false;
+		}
+		else
+		{
+			subtype = lwgeom_get_type(geom);
+		}
+
+	}
+	array_free_iterator(iter_geoms);
+	array_free_iterator(iter_ids);
+	if(i==0)
+	{
+		elog(NOTICE, "No valid geometry - id pairs found");
+		PG_FREE_IF_COPY(arr_geoms, 0);
+		PG_FREE_IF_COPY(arr_ids, 1);
+		PG_RETURN_NULL();	       
+	}
+	if ( is_homogeneous )
+	{
+		col->type = lwtype_get_collectiontype(subtype);
+	}
+
+	/* Read sensible precision defaults (about one meter) given the srs */
+	sp = srid_axis_precision(fcinfo, lwgeom_get_srid(lwcollection_as_lwgeom(col)), TWKB_DEFAULT_PRECISION);
+	
+	/* If user specified XY precision, use it */
+	if ( PG_NARGS() > 2 && ! PG_ARGISNULL(2) )
+		sp.precision_xy = PG_GETARG_INT32(2);
+
+	/* If user specified Z precision, use it */
+	if ( PG_NARGS() > 3 && ! PG_ARGISNULL(3) )
+		sp.precision_z = PG_GETARG_INT32(3);
+
+	/* If user specified M precision, use it */
+	if ( PG_NARGS() > 4 && ! PG_ARGISNULL(4) )
+		sp.precision_m = PG_GETARG_INT32(4);
+
+	/* We are building an ID'ed output */
+	variant = TWKB_ID;
+	
+	/* If user wants registered twkb sizes */
+	if ( PG_NARGS() > 5 && ! PG_ARGISNULL(5) && PG_GETARG_BOOL(5) )
+		variant |= TWKB_SIZE;
+	
+	/* If user wants bounding boxes */
+	if ( PG_NARGS() > 6 && ! PG_ARGISNULL(6) && PG_GETARG_BOOL(6) )
+		variant |= TWKB_BBOX;
+
+	/* Write out the TWKB */
+	twkb = lwgeom_to_twkb_with_idlist(lwcollection_as_lwgeom(col), 
+					  idlist, variant, 
+					  sp.precision_xy, sp.precision_z, sp.precision_m, 
+					  &twkb_size);
+					  
+	/* Convert to a bytea return type */
+	result = palloc(twkb_size + VARHDRSZ);
+	memcpy(VARDATA(result), twkb, twkb_size);
+	SET_VARSIZE(result, twkb_size + VARHDRSZ);
+	
+	/* Clean up */
+	pfree(twkb);
+	pfree(idlist);
+	lwcollection_free(col);
+	PG_FREE_IF_COPY(arr_geoms, 0);
+	PG_FREE_IF_COPY(arr_ids, 1);
+	
+	PG_RETURN_BYTEA_P(result);
+}
+
+/*
  * WKBFromLWGEOM(lwgeom) --> wkb
  * this will have no 'SRID=#;'
  */
@@ -546,7 +797,7 @@ Datum LWGEOM_from_bytea(PG_FUNCTION_ARGS)
 	POSTGIS_DEBUG(2, "LWGEOM_from_bytea start");
 
 	result = (GSERIALIZED *)DatumGetPointer(DirectFunctionCall1(
-	                                          LWGEOMFromWKB, PG_GETARG_DATUM(0)));
+						  LWGEOMFromWKB, PG_GETARG_DATUM(0)));
 
 	PG_RETURN_POINTER(result);
 }

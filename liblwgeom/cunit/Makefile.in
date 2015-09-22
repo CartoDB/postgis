@@ -48,6 +48,9 @@ OBJS=	\
 	cu_surface.o \
 	cu_out_x3d.o \
 	cu_in_geojson.o \
+	cu_in_twkb.o \
+	cu_out_twkb.o \
+	cu_varint.o \
 	cu_in_wkb.o \
 	cu_in_wkt.o \
 	cu_tester.o 
