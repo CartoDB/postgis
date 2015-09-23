@@ -1,0 +1,6 @@
+# backport of features from 2.2 to 2.1
+comment = 'backport of postgis features from 2.2 to 2.1'
+default_version = '2.1a'
+relocatable = true
+superuser = false
+requires = 'postgis'

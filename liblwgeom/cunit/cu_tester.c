@@ -52,6 +52,8 @@ extern void wkb_out_suite_setup(void);
 extern void surface_suite_setup(void);
 extern void wkb_in_suite_setup(void);
 extern void wkt_in_suite_setup(void);
+extern void twkb_in_suite_setup(void);
+extern void twkb_out_suite_setup(void);
 
 
 /* AND ADD YOUR SUITE SETUP FUNCTION HERE (2 of 2) */
@@ -90,6 +92,8 @@ PG_SuiteSetup setupfuncs[] =
 	surface_suite_setup,
 	wkb_in_suite_setup,
 	wkt_in_suite_setup,
+	twkb_in_suite_setup,
+	twkb_out_suite_setup,
 	NULL
 };
 

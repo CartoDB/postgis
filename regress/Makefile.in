@@ -123,6 +123,7 @@ TESTS = \
 	split \
 	relate \
 	bestsrid \
+  twkb \
 	concave_hull
 
 ifeq ($(shell expr $(POSTGIS_PGSQL_VERSION) ">=" 91),1)

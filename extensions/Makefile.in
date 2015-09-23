@@ -11,6 +11,7 @@
 
 SUBDIRS = postgis 
 SUBDIRS += postgis_tiger_geocoder 
+SUBDIRS += postgis_backport
 ifeq (@TOPOLOGY@,topology)
 	SUBDIRS += postgis_topology
 endif
