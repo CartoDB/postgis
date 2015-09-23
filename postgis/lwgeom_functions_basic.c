@@ -2667,11 +2667,13 @@ Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS)
 	GSERIALIZED *input = (GSERIALIZED *)PG_DETOAST_DATUM_COPY(PG_GETARG_DATUM(0));
 	GSERIALIZED *output;
 	LWGEOM *lwgeom_in = lwgeom_from_gserialized(input);
-	LWGEOM *lwgeom_out;
+	LWGEOM *lwgeom_out = NULL;
+	double tolerance = 0.0;
 
-	/* lwnotice("ST_RemoveRepeatedPoints got %p", lwgeom_in); */
+	if ( PG_NARGS() > 1 && ! PG_ARGISNULL(1) )
+		tolerance = PG_GETARG_FLOAT8(1);
 
-	lwgeom_out = lwgeom_remove_repeated_points(lwgeom_in);
+	lwgeom_out = lwgeom_remove_repeated_points(lwgeom_in, tolerance);
 	output = geometry_serialize(lwgeom_out);
 
 	lwgeom_free(lwgeom_in);
