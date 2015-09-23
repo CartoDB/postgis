@@ -14,3 +14,9 @@ CREATE OR REPLACE FUNCTION ST_GeomFromTWKB(bytea)
   AS 'MODULE_PATHNAME','LWGEOMFromTWKB'
   LANGUAGE 'c' IMMUTABLE STRICT;
 
+CREATE OR REPLACE FUNCTION ST_RemoveRepeatedPoints(geom geometry, tolerance float8)
+  RETURNS geometry
+  AS 'MODULE_PATHNAME', 'ST_RemoveRepeatedPoints'
+  LANGUAGE 'c' IMMUTABLE STRICT
+  COST 100;
+

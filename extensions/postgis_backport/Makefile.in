@@ -1,5 +1,7 @@
 EXTENSION = postgis_backport
-DATA = postgis_backport--2.1a.sql
+DATA =	postgis_backport--2.1a.sql \
+	postgis_backport--2.1b.sql \
+	postgis_backport--2.1a--2.1b.sql
 
 # 
 # Leave the below alone
