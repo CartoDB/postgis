@@ -627,7 +627,7 @@ ptarray_clone_deep(const POINTARRAY *in)
 
 	out->flags = in->flags;
 	out->npoints = in->npoints;
-	out->maxpoints = in->maxpoints;
+	out->maxpoints = in->npoints;
 
 	FLAGS_SET_READONLY(out->flags, 0);
 
@@ -1426,22 +1426,33 @@ ptarray_remove_repeated_points_minpoints(POINTARRAY *in, double tolerance, int m
 	/* Now fill up the actual points (NOTE: could be optimized) */
 
 	opn=1;
+	/* Keep the first point */
 	memcpy(getPoint_internal(out, 0), getPoint_internal(in, 0), ptsize);
 	last_point = getPoint2d_cp(in, 0);
 	LWDEBUGF(3, " first point copied, out points: %d", opn);
 	for ( ipn = 1; ipn < in->npoints; ++ipn)
 	{
 		this_point = getPoint2d_cp(in, ipn);
-		if ( (ipn >= in->npoints-minpoints+1 && opn < minpoints) || 
-		     (tolerance == 0 && memcmp(getPoint_internal(in, ipn-1), getPoint_internal(in, ipn), ptsize) != 0) ||
-		     (tolerance > 0.0 && distance2d_sqr_pt_pt(last_point, this_point) > tolsq) )
+		if ( ipn < in->npoints-minpoints+1 || opn >= minpoints ) /* need extra points to hit minponts */
 		{
-			/* The point is different from the previous,
-			 * we add it to output */
-			memcpy(getPoint_internal(out, opn++), getPoint_internal(in, ipn), ptsize);
-			last_point = this_point;
-			LWDEBUGF(3, " Point %d differs from point %d. Out points: %d", ipn, ipn-1, opn);
+			if (
+				(tolerance == 0 && memcmp(getPoint_internal(in, ipn-1), getPoint_internal(in, ipn), ptsize) == 0) || /* exact dupe */
+				(tolerance > 0.0 && distance2d_sqr_pt_pt(last_point, this_point) <= tolsq) /* within the removal tolerance */
+			) continue;
 		}
+
+		/*
+		 * The point is different (see above) from the previous,
+		 * so we add it to output
+		 */
+		memcpy(getPoint_internal(out, opn++), getPoint_internal(in, ipn), ptsize);
+		last_point = this_point;
+		LWDEBUGF(3, " Point %d differs from point %d. Out points: %d", ipn, ipn-1, opn);
+	}
+	/* Keep the last point */
+	if ( memcmp(last_point, getPoint_internal(in, ipn-1), ptsize) != 0 )
+	{
+		memcpy(getPoint_internal(out, opn-1), getPoint_internal(in, ipn-1), ptsize);
 	}
 
 	LWDEBUGF(3, " in:%d out:%d", out->npoints, opn);

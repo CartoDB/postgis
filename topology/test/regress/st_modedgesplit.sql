@@ -92,12 +92,30 @@ SELECT check_changes();
 SELECT 'closed', ST_ModEdgeSplit('city_data', 1, 'SRID=4326;POINT(3 38)');
 SELECT check_changes();
 
+--
+-- Split an edge referenced by multiple TopoGeometries
+--
+-- See https://trac.osgeo.org/postgis/ticket/3407
+--
+CREATE TABLE city_data.fl(id varchar);
+SELECT 'L' || topology.AddTopoGeometryColumn('city_data',
+  'city_data', 'fl', 'g', 'LINESTRING');
+INSERT INTO city_data.fl VALUES
+ ('E7.1', topology.CreateTopoGeom('city_data', 2, 1, '{{7,2}}')),
+ ('E7.2', topology.CreateTopoGeom('city_data', 2, 1, '{{7,2}}'));
+SELECT '#3407', ST_ModEdgeSplit('city_data', 7, 'SRID=4326;POINT(28 22)');
+SELECT check_changes();
+
 -- Robustness of edge splitting (#1711)
 
 -- clean all up first
 DELETE FROM city_data.edge_data; 
 DELETE FROM city_data.node; 
 DELETE FROM city_data.face where face_id > 0; 
+SELECT 'seq_reset',
+       setval('city_data.edge_data_edge_id_seq', 1, false),
+       setval('city_data.face_face_id_seq', 1, false),
+       setval('city_data.node_node_id_seq', 1, false);
 
 CREATE TEMP TABLE t AS
 SELECT
@@ -130,3 +148,13 @@ DROP TABLE t;
 DROP FUNCTION check_changes();
 SELECT DropTopology('city_data');
 DELETE FROM spatial_ref_sys where srid = 4326;
+
+-- See https://trac.osgeo.org/postgis/ticket/3401
+SELECT 't3401.start', CreateTopology('bug3401') > 1;
+SELECT 't3401.N1', ST_AddIsoNode('bug3401', 0, ST_MakePoint(-180, 0));
+SELECT 't3401.N2', ST_AddIsoNode('bug3401', 0, ST_MakePoint(0, 0));
+SELECT 't3401.L1', ST_AddIsoEdge('bug3401', 1, 2, 'LINESTRING(-180 0, 0 0)'::geometry);
+SELECT 't3401.valid_before', * FROM ValidateTopology('bug3401');
+SELECT 't3401.split', ST_ModEdgeSplit('bug3401', 1, ST_MakePoint(-20, 0));
+SELECT 't3401.valid_after', * FROM ValidateTopology('bug3401');
+SELECT 't3401.end', DropTopology('bug3401');

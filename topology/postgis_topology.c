@@ -204,7 +204,7 @@ cb_loadTopologyByName(const LWT_BE_DATA* be, const char *name)
   if ( topo->srid < 0 )
   {
     lwnotice("Topology SRID value %d converted to "
-             "the officially unknown SRID value %d", SRID_UNKNOWN);
+             "the officially unknown SRID value %d", topo->srid, SRID_UNKNOWN);
     topo->srid = SRID_UNKNOWN;
   }
 
@@ -630,11 +630,6 @@ fillEdgeFields(LWT_ISO_EDGE* edge, HeapTuple row, TupleDesc rowdesc, int fields)
     POSTGIS_DEBUGF(2, "fillEdgeFields: colno%d (face_left)"
                       " has int32 val of %d", colno, val);
   }
-#if POSTGIS_DEBUG_LEVEL > 1
-  else {
-    edge->face_left = 6767; /* debugging */
-  }
-#endif
   if ( fields & LWT_COL_EDGE_FACE_RIGHT ) {
     dat = SPI_getbinval(row, rowdesc, ++colno, &isnull);
     if ( isnull ) {
@@ -646,11 +641,6 @@ fillEdgeFields(LWT_ISO_EDGE* edge, HeapTuple row, TupleDesc rowdesc, int fields)
     POSTGIS_DEBUGF(2, "fillEdgeFields: colno%d (face_right)"
                       " has int32 val of %d", colno, val);
   }
-#if POSTGIS_DEBUG_LEVEL > 1
-  else {
-    edge->face_right = 6767; /* debugging */
-  }
-#endif
   if ( fields & LWT_COL_EDGE_NEXT_LEFT ) {
     dat = SPI_getbinval(row, rowdesc, ++colno, &isnull);
     if ( isnull ) {
@@ -683,11 +673,6 @@ fillEdgeFields(LWT_ISO_EDGE* edge, HeapTuple row, TupleDesc rowdesc, int fields)
       edge->geom = NULL;
     }
   }
-#if POSTGIS_DEBUG_LEVEL > 1
-  else {
-    edge->geom = (void*)0x67676767; /* debugging */
-  }
-#endif
 }
 
 static void
@@ -717,11 +702,6 @@ fillNodeFields(LWT_ISO_NODE* node, HeapTuple row, TupleDesc rowdesc, int fields)
       node->geom = NULL;
     }
   }
-#if POSTGIS_DEBUG_LEVEL > 1
-  else {
-    node->geom = (void*)0x67676767; /* debugging */
-  }
-#endif
 }
 
 static void
@@ -757,11 +737,6 @@ fillFaceFields(LWT_ISO_FACE* face, HeapTuple row, TupleDesc rowdesc, int fields)
       face->mbr = NULL;
     }
   }
-#if POSTGIS_DEBUG_LEVEL > 1
-  else {
-    face->mbr = (void*)0x67676767; /* debugging */
-  }
-#endif
 }
 
 /* return 0 on failure (null) 1 otherwise */
@@ -1903,50 +1878,60 @@ cb_updateTopoGeomEdgeSplit ( const LWT_BE_TOPOLOGY* topo,
   }
 
   ntopogeoms = SPI_processed;
-  for ( i=0; i<ntopogeoms; ++i )
+  if ( ntopogeoms )
   {
-    HeapTuple row = SPI_tuptable->vals[i];
-    TupleDesc tdesc = SPI_tuptable->tupdesc;
-    int negate;
-    int element_id;
-    int topogeo_id;
-    int layer_id;
-    int element_type;
-
-    if ( ! getNotNullInt32( row, tdesc, 1, &element_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null element_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-    negate = ( element_id < 0 );
-
-    if ( ! getNotNullInt32( row, tdesc, 2, &topogeo_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null topogeo_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
-    if ( ! getNotNullInt32( row, tdesc, 3, &layer_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null layer_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
-    if ( ! getNotNullInt32( row, tdesc, 4, &element_type ) ) {
-		  cberror(topo->be_data,
-        "unexpected null element_type in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
     resetStringInfo(sql);
-    appendStringInfo(sql,
-      "INSERT INTO \"%s\".relation VALUES ("
-      "%d,%d,%" LWTFMT_ELEMID ",%d)", topo->name,
-      topogeo_id, layer_id, negate ? -new_edge1 : new_edge1, element_type);
+    appendStringInfo(sql, "INSERT INTO \"%s\".relation VALUES ", topo->name);
+    for ( i=0; i<ntopogeoms; ++i )
+    {
+      HeapTuple row = SPI_tuptable->vals[i];
+      TupleDesc tdesc = SPI_tuptable->tupdesc;
+      int negate;
+      int element_id;
+      int topogeo_id;
+      int layer_id;
+      int element_type;
+
+      if ( ! getNotNullInt32( row, tdesc, 1, &element_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null element_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+      negate = ( element_id < 0 );
+
+      if ( ! getNotNullInt32( row, tdesc, 2, &topogeo_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null topogeo_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( ! getNotNullInt32( row, tdesc, 3, &layer_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null layer_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( ! getNotNullInt32( row, tdesc, 4, &element_type ) ) {
+        cberror(topo->be_data,
+          "unexpected null element_type in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( i ) appendStringInfoChar(sql, ',');
+      appendStringInfo(sql, "(%d,%d,%" LWTFMT_ELEMID ",%d)",
+        topogeo_id, layer_id, negate ? -new_edge1 : new_edge1, element_type);
+      if ( new_edge2 != -1 ) {
+        resetStringInfo(sql);
+        appendStringInfo(sql,
+          ",VALUES (%d,%d,%" LWTFMT_ELEMID ",%d",
+          topogeo_id, layer_id, negate ? -new_edge2 : new_edge2, element_type);
+      }
+    }
+    POSTGIS_DEBUGF(1, "cb_updateTopoGeomEdgeSplit query: %s", sql->data);
     spi_result = SPI_execute(sql->data, false, 0);
     MemoryContextSwitchTo( oldcontext ); /* switch back */
     if ( spi_result != SPI_OK_INSERT ) {
@@ -1956,28 +1941,11 @@ cb_updateTopoGeomEdgeSplit ( const LWT_BE_TOPOLOGY* topo,
       return 0;
     }
     if ( SPI_processed ) topo->be_data->data_changed = true;
-    if ( new_edge2 != -1 ) {
-      resetStringInfo(sql);
-      appendStringInfo(sql,
-        "INSERT INTO FROM \"%s\".relation VALUES ("
-        "%d,%d,%" LWTFMT_ELEMID ",%d", topo->name,
-        topogeo_id, layer_id, negate ? -new_edge2 : new_edge2, element_type);
-      spi_result = SPI_execute(sql->data, false, 0);
-      MemoryContextSwitchTo( oldcontext ); /* switch back */
-      if ( spi_result != SPI_OK_INSERT ) {
-        cberror(topo->be_data, "unexpected return (%d) from query execution: %s",
-                spi_result, sql->data);
-        pfree(sqldata.data);
-        return 0;
-      }
-      if ( SPI_processed ) topo->be_data->data_changed = true;
-    }
   }
-
-  /* TODO: release string info ! */
 
   POSTGIS_DEBUGF(1, "cb_updateTopoGeomEdgeSplit: updated %d topogeoms", ntopogeoms);
 
+  pfree(sqldata.data);
   return 1;
 }
 
@@ -2028,53 +1996,62 @@ cb_updateTopoGeomFaceSplit ( const LWT_BE_TOPOLOGY* topo,
   }
 
   ntopogeoms = SPI_processed;
-  for ( i=0; i<ntopogeoms; ++i )
+  if ( ntopogeoms )
   {
-    HeapTuple row = SPI_tuptable->vals[i];
-    TupleDesc tdesc = SPI_tuptable->tupdesc;
-    int negate;
-    int element_id;
-    int topogeo_id;
-    int layer_id;
-    int element_type;
-
-    if ( ! getNotNullInt32( row, tdesc, 1, &element_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null element_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-    negate = ( element_id < 0 );
-
-    if ( ! getNotNullInt32( row, tdesc, 2, &topogeo_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null topogeo_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
-    if ( ! getNotNullInt32( row, tdesc, 3, &layer_id ) ) {
-		  cberror(topo->be_data,
-        "unexpected null layer_id in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
-    if ( ! getNotNullInt32( row, tdesc, 4, &element_type ) ) {
-		  cberror(topo->be_data,
-        "unexpected null element_type in \"%s\".relation",
-        topo->name);
-	    return 0;
-    }
-
     resetStringInfo(sql);
-    appendStringInfo(sql,
-      "INSERT INTO \"%s\".relation VALUES ("
-      "%d,%d,%" LWTFMT_ELEMID ",%d)", topo->name,
-      topogeo_id, layer_id, negate ? -new_face1 : new_face1, element_type);
+    appendStringInfo(sql, "INSERT INTO \"%s\".relation VALUES ", topo->name);
+    for ( i=0; i<ntopogeoms; ++i )
+    {
+      HeapTuple row = SPI_tuptable->vals[i];
+      TupleDesc tdesc = SPI_tuptable->tupdesc;
+      int negate;
+      int element_id;
+      int topogeo_id;
+      int layer_id;
+      int element_type;
+
+      if ( ! getNotNullInt32( row, tdesc, 1, &element_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null element_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+      negate = ( element_id < 0 );
+
+      if ( ! getNotNullInt32( row, tdesc, 2, &topogeo_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null topogeo_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( ! getNotNullInt32( row, tdesc, 3, &layer_id ) ) {
+        cberror(topo->be_data,
+          "unexpected null layer_id in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( ! getNotNullInt32( row, tdesc, 4, &element_type ) ) {
+        cberror(topo->be_data,
+          "unexpected null element_type in \"%s\".relation",
+          topo->name);
+        return 0;
+      }
+
+      if ( i ) appendStringInfoChar(sql, ',');
+      appendStringInfo(sql,
+        "(%d,%d,%" LWTFMT_ELEMID ",%d)",
+        topogeo_id, layer_id, negate ? -new_face1 : new_face1, element_type);
+
+      if ( new_face2 != -1 ) {
+        appendStringInfo(sql,
+          ",(%d,%d,%" LWTFMT_ELEMID ",%d)",
+          topogeo_id, layer_id, negate ? -new_face2 : new_face2, element_type);
+      }
+    }
 
     POSTGIS_DEBUGF(1, "cb_updateTopoGeomFaceSplit query: %s", sql->data);
-
     spi_result = SPI_execute(sql->data, false, 0);
     MemoryContextSwitchTo( oldcontext ); /* switch back */
     if ( spi_result != SPI_OK_INSERT ) {
@@ -2084,31 +2061,11 @@ cb_updateTopoGeomFaceSplit ( const LWT_BE_TOPOLOGY* topo,
       return 0;
     }
     if ( SPI_processed ) topo->be_data->data_changed = true;
-    if ( new_face2 != -1 ) {
-      resetStringInfo(sql);
-      appendStringInfo(sql,
-        "INSERT INTO \"%s\".relation VALUES ("
-        "%d,%d,%" LWTFMT_ELEMID ",%d)", topo->name,
-        topogeo_id, layer_id, negate ? -new_face2 : new_face2, element_type);
-
-      POSTGIS_DEBUGF(1, "cb_updateTopoGeomFaceSplit query: %s", sql->data);
-
-      spi_result = SPI_execute(sql->data, false, 0);
-      MemoryContextSwitchTo( oldcontext ); /* switch back */
-      if ( spi_result != SPI_OK_INSERT ) {
-        cberror(topo->be_data, "unexpected return (%d) from query execution: %s",
-                spi_result, sql->data);
-        pfree(sqldata.data);
-        return 0;
-      }
-      if ( SPI_processed ) topo->be_data->data_changed = true;
-    }
   }
-
-  /* TODO: release string info */
 
   POSTGIS_DEBUGF(1, "cb_updateTopoGeomFaceSplit: updated %d topogeoms", ntopogeoms);
 
+  pfree(sqldata.data);
   return 1;
 }
 

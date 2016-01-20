@@ -420,6 +420,43 @@ lwt_be_ExistsEdgeIntersectingPoint(LWT_TOPOLOGY* topo, LWPOINT* pt)
  *
  ************************************************************************/
 
+static LWGEOM *
+_lwt_toposnap(LWGEOM *src, LWGEOM *tgt, double tol)
+{
+  LWGEOM *tmp = src;
+  LWGEOM *tmp2;
+  int changed;
+  int iterations = 0;
+
+  int maxiterations = lwgeom_count_vertices(tgt);
+
+  /* GEOS snapping can be unstable */
+  /* See https://trac.osgeo.org/geos/ticket/760 */
+  do {
+    LWGEOM *tmp3;
+    tmp2 = lwgeom_snap(tmp, tgt, tol);
+    ++iterations;
+    changed = ( lwgeom_count_vertices(tmp2) != lwgeom_count_vertices(tmp) );
+#if GEOS_NUMERIC_VERSION < 30309
+    /* Up to GEOS-3.3.8, snapping could duplicate points */
+    if ( changed ) {
+      tmp3 = lwgeom_remove_repeated_points( tmp2, 0 );
+      lwgeom_free(tmp2);
+      tmp2 = tmp3;
+      changed = ( lwgeom_count_vertices(tmp2) != lwgeom_count_vertices(tmp) );
+    }
+#endif /* GEOS_NUMERIC_VERSION < 30309 */
+    LWDEBUGF(2, "After iteration %d, geometry changed ? %d (%d vs %d vertices)", iterations, changed, lwgeom_count_vertices(tmp2), lwgeom_count_vertices(tmp));
+    if ( tmp != src ) lwgeom_free(tmp);
+    tmp = tmp2;
+  } while ( changed && iterations <= maxiterations );
+
+  LWDEBUGF(1, "It took %d/%d iterations to properly snap",
+              iterations, maxiterations);
+
+  return tmp;
+}
+
 static void
 _lwt_release_faces(LWT_ISO_FACE *faces, int num_faces)
 {
@@ -2653,7 +2690,18 @@ _lwt_AddEdge( LWT_TOPOLOGY* topo,
     }
   }
 
+  /* Check face splitting */
+
+  if ( ! isclosed && ( epan.was_isolated || span.was_isolated ) )
+  {
+    LWDEBUG(1, "New edge is dangling, so it cannot split any face");
+    return newedge.edge_id; /* no split */
+  }
+
   int newface1 = -1;
+
+  /* IDEA: avoid building edge ring if input is closed, which means we
+   *       know in advance it splits a face */
 
   if ( ! modFace )
   {
@@ -2664,7 +2712,6 @@ _lwt_AddEdge( LWT_TOPOLOGY* topo,
     }
   }
 
-  /* Check face splitting */
   int newface = _lwt_AddFaceSplit( topo, newedge.edge_id,
                                    newedge.face_left, 0 );
   if ( modFace )
@@ -3450,8 +3497,8 @@ lwt_ChangeEdgeGeom(LWT_TOPOLOGY* topo, LWT_ELEMID edge_id, LWLINE *geom)
                                   isclosed ? &span_pre : NULL, edge_id );
 
   LWDEBUGF(1, "edges adjacent to old edge are %" LWTFMT_ELEMID
-              " and % (first point), %" LWTFMT_ELEMID
-              " and % (last point)" LWTFMT_ELEMID,
+              " and %" LWTFMT_ELEMID " (first point), %" LWTFMT_ELEMID
+              " and %" LWTFMT_ELEMID " (last point)",
               span_pre.nextCW, span_pre.nextCCW,
               epan_pre.nextCW, epan_pre.nextCCW);
 
@@ -3488,9 +3535,8 @@ lwt_ChangeEdgeGeom(LWT_TOPOLOGY* topo, LWT_ELEMID edge_id, LWLINE *geom)
                           isclosed ? &span_post : NULL, edge_id );
 
   LWDEBUGF(1, "edges adjacent to new edge are %" LWTFMT_ELEMID
-              " and %" LWTFMT_ELEMID
-              " (first point), %" LWTFMT_ELEMID
-              " and % (last point)" LWTFMT_ELEMID,
+              " and %" LWTFMT_ELEMID " (first point), %" LWTFMT_ELEMID
+              " and %" LWTFMT_ELEMID " (last point)",
               span_pre.nextCW, span_pre.nextCCW,
               epan_pre.nextCW, epan_pre.nextCCW);
 
@@ -5059,8 +5105,9 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
     LWGEOM *prj;
     int contains;
     GEOSGeometry *prjg, *gg;
+    LWT_ELEMID edge_id = e->edge_id;
 
-    LWDEBUGF(1, "Splitting edge %" LWTFMT_ELEMID, e->edge_id);
+    LWDEBUGF(1, "Splitting edge %" LWTFMT_ELEMID, edge_id);
 
     /* project point to line, split edge by point */
     prj = lwgeom_closest_point(g, pt);
@@ -5119,7 +5166,7 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
 
       LWDEBUGF(1, "Edge %" LWTFMT_ELEMID
                   " does not contain projected point to it",
-                  e->edge_id);
+                  edge_id);
 
       /* In order to reduce the robustness issues, we'll pick
        * an edge that contains the projected point, if possible */
@@ -5137,7 +5184,7 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
       -- a projected point internally, so we need another way.
       */
       snaptol = _lwt_minTolerance(prj);
-      snapedge = lwgeom_snap(g, prj, snaptol);
+      snapedge = _lwt_toposnap(g, prj, snaptol);
       snapline = lwgeom_as_lwline(snapedge);
 
       LWDEBUGF(1, "Edge snapped with tolerance %g", snaptol);
@@ -5190,7 +5237,7 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
       }
 #endif
 
-      if ( -1 == lwt_ChangeEdgeGeom( topo, e->edge_id, snapline ) )
+      if ( -1 == lwt_ChangeEdgeGeom( topo, edge_id, snapline ) )
       {
         /* TODO: should have invoked lwerror already, leaking memory */
         lwgeom_free(prj);
@@ -5214,7 +5261,7 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
 #endif
 
     /* TODO: pass 1 as last argument (skipChecks) ? */
-    id = lwt_ModEdgeSplit( topo, e->edge_id, lwgeom_as_lwpoint(prj), 0 );
+    id = lwt_ModEdgeSplit( topo, edge_id, lwgeom_as_lwpoint(prj), 0 );
     if ( -1 == id )
     {
       /* TODO: should have invoked lwerror already, leaking memory */
@@ -5225,6 +5272,20 @@ lwt_AddPoint(LWT_TOPOLOGY* topo, LWPOINT* point, double tol)
     }
 
     lwgeom_free(prj);
+
+    /*
+     * TODO: decimate the two new edges with the given tolerance ?
+     *
+     * the edge identifiers to decimate would be: edge_id and "id"
+     * The problem here is that decimation of existing edges
+     * may introduce intersections or topological inconsistencies,
+     * for example:
+     *
+     *  - A node may end up falling on the other side of the edge
+     *  - The decimated edge might intersect another existing edge
+     *
+     */
+
     break; /* we only want to snap a single edge */
   }
   _lwt_release_edges(edges, num);
@@ -5322,12 +5383,15 @@ _lwt_AddLineEdge( LWT_TOPOLOGY* topo, LWLINE* edge, double tol )
 {
   LWCOLLECTION *col;
   LWPOINT *start_point, *end_point;
-  LWGEOM *tmp;
+  LWGEOM *tmp, *tmp2;
   LWT_ISO_NODE *node;
   LWT_ELEMID nid[2]; /* start_node, end_node */
   LWT_ELEMID id; /* edge id */
   POINT4D p4d;
   int nn, i;
+
+  LWDEBUGG(1, lwline_as_lwgeom(edge), "_lwtAddLineEdge");
+  LWDEBUGF(1, "_lwtAddLineEdge with tolerance %g", tol);
 
   start_point = lwline_get_lwpoint(edge, 0);
   if ( ! start_point )
@@ -5393,7 +5457,6 @@ _lwt_AddLineEdge( LWT_TOPOLOGY* topo, LWLINE* edge, double tol )
   col = lwgeom_as_lwcollection(tmp);
   if ( col )
   {{
-    LWGEOM *tmp2;
 
     col = lwcollection_extract(col, LINETYPE);
 
@@ -5445,7 +5508,34 @@ _lwt_AddLineEdge( LWT_TOPOLOGY* topo, LWLINE* edge, double tol )
   }
 
   /* No previously existing edge was found, we'll add one */
-  /* TODO: skip checks, I guess ? */
+
+  /* Remove consecutive vertices below given tolerance
+   * on edge addition */
+  if ( tol )
+  {{
+    tmp2 = lwline_remove_repeated_points(edge, tol);
+    LWDEBUGG(1, tmp2, "Repeated-point removed");
+    edge = lwgeom_as_lwline(tmp2);
+    lwgeom_free(tmp);
+    tmp = tmp2;
+
+    /* check if the so-decimated edge _now_ exists */
+    id = _lwt_GetEqualEdge ( topo, edge );
+    LWDEBUGF(1, "_lwt_GetEqualEdge returned %" LWTFMT_ELEMID, id);
+    if ( id == -1 )
+    {
+      lwgeom_free(tmp); /* probably too late, due to internal lwerror */
+      return -1;
+    }
+    if ( id ) 
+    {
+      lwgeom_free(tmp); /* takes "edge" down with it */
+      return id;
+    }
+  }}
+
+
+  /* TODO: skip checks ? */
   id = lwt_AddEdgeModFace( topo, nid[0], nid[1], edge, 0 );
   LWDEBUGF(1, "lwt_AddEdgeModFace returned %" LWTFMT_ELEMID, id);
   if ( id == -1 )
@@ -5488,7 +5578,7 @@ lwt_AddLine(LWT_TOPOLOGY* topo, LWLINE* line, double tol, int* nedges)
   LWGEOM *geomsbuf[1];
   LWGEOM **geoms;
   int ngeoms;
-  LWGEOM *noded;
+  LWGEOM *noded, *tmp;
   LWCOLLECTION *col;
   LWT_ELEMID *ids;
   LWT_ISO_EDGE *edges;
@@ -5504,8 +5594,17 @@ lwt_AddLine(LWT_TOPOLOGY* topo, LWLINE* line, double tol, int* nedges)
   LWDEBUGF(1, "Working tolerance:%.15g", tol);
   LWDEBUGF(1, "Input line has srid=%d", line->srid);
 
+  /* Remove consecutive vertices below given tolerance upfront */
+  if ( tol )
+  {{
+    LWLINE *clean = lwgeom_as_lwline(lwline_remove_repeated_points(line, tol));
+    tmp = lwline_as_lwgeom(clean); /* NOTE: might collapse to non-simple */
+    LWDEBUGG(1, tmp, "Repeated-point removed");
+  }} else tmp=(LWGEOM*)line;
+
   /* 1. Self-node */
-  noded = lwgeom_node((LWGEOM*)line);
+  noded = lwgeom_node((LWGEOM*)tmp);
+  if ( tmp != (LWGEOM*)line ) lwgeom_free(tmp);
   if ( ! noded ) return NULL; /* should have called lwerror already */
   LWDEBUGG(1, noded, "Noded");
 
@@ -5554,7 +5653,7 @@ lwt_AddLine(LWT_TOPOLOGY* topo, LWLINE* line, double tol, int* nedges)
       LWDEBUGF(1, "Snapping noded, with srid=%d "
                   "to interesecting edges, with srid=%d",
                   noded->srid, iedges->srid);
-      snapped = lwgeom_snap(noded, iedges, tol);
+      snapped = _lwt_toposnap(noded, iedges, tol);
       lwgeom_free(noded);
       LWDEBUGG(1, snapped, "Snapped");
       LWDEBUGF(1, "Diffing snapped, with srid=%d "
@@ -5590,7 +5689,7 @@ lwt_AddLine(LWT_TOPOLOGY* topo, LWLINE* line, double tol, int* nedges)
 
   /* 2.1. Node with existing nodes within tol
    * TODO: check if we should be only considering _isolated_ nodes! */
-  nodes = lwt_be_getNodeWithinBox2D( topo, &qbox, &num, LWT_COL_EDGE_ALL, 0 );
+  nodes = lwt_be_getNodeWithinBox2D( topo, &qbox, &num, LWT_COL_NODE_ALL, 0 );
   if ( num == -1 )
   {
     lwgeom_free(noded);
@@ -5627,7 +5726,7 @@ lwt_AddLine(LWT_TOPOLOGY* topo, LWLINE* line, double tol, int* nedges)
 
       /* TODO: consider snapping once against all elements
        *      (rather than once with edges and once with nodes) */
-      tmp = lwgeom_snap(noded, inodes, tol);
+      tmp = _lwt_toposnap(noded, inodes, tol);
       lwgeom_free(noded);
       noded = tmp;
       LWDEBUGG(1, noded, "Node-snapped");

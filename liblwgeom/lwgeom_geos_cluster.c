@@ -17,6 +17,8 @@
 #include "lwgeom_geos.h"
 #include "lwunionfind.h"
 
+static const int STRTREE_NODE_CAPACITY = 10;
+
 /* Utility struct used to pass information to the GEOSSTRtree_query callback */
 struct UnionIfIntersectingContext
 {
@@ -58,7 +60,7 @@ static struct STRTree
 make_strtree(void** geoms, uint32_t num_geoms, char is_lwgeom)
 {
 	struct STRTree tree;
-	tree.tree = GEOSSTRtree_create(num_geoms);
+	tree.tree = GEOSSTRtree_create(STRTREE_NODE_CAPACITY);
 	if (tree.tree == NULL)
 	{
 		return tree;
@@ -336,10 +338,15 @@ combine_geometries(UNIONFIND* uf, void** geoms, uint32_t num_geoms, void*** clus
 		if ((i == num_geoms - 1) ||
 		        (UF_find(uf, ordered_components[i]) != UF_find(uf, ordered_components[i+1])))
 		{
+			if (k >= uf->num_clusters) {
+				/* Should not get here - it means that we have more clusters than uf->num_clusters thinks we should. */
+				return LW_FAILURE;
+			}
+
 			if (is_lwgeom)
 			{
-				LWGEOM** components = lwalloc(num_geoms * sizeof(LWGEOM*));
-				memcpy(components, geoms_in_cluster, num_geoms * sizeof(LWGEOM*));
+				LWGEOM** components = lwalloc(j * sizeof(LWGEOM*));
+				memcpy(components, geoms_in_cluster, j * sizeof(LWGEOM*));
 				(*clusterGeoms)[k++] = lwcollection_construct(COLLECTIONTYPE, components[0]->srid, NULL, j, (LWGEOM**) components);
 			}
 			else

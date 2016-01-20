@@ -1,19 +1,45 @@
-PostGIS 2.2.1
-2015/11/XX
+PostGIS 2.2.2dev
+2016/MM/DD
 
  * Bug Fixes *
 
+  - #3422, Improve ST_Split robustness on standard precision double
+           systems (arm64, ppc64el, s390c, powerpc, ...)
+  - #3427, Update spatial_ref_sys to EPSG version 8.8
+  - #3436, memory handling mistake in ptarray_clone_deep
+
+PostGIS 2.2.1
+2016/01/06
+
+ * Bug Fixes *
+
+  - #2232, avoid accumulated error in SVG rounding
+  - #3321, Fix performance regression in topology loading
+  - #3329, Fix robustness regression in TopoGeo_addPoint
+  - #3349, Fix installation path of postgis_topology scripts
   - #3351, set endnodes isolation on ST_RemoveIsoEdge
            (and lwt_RemIsoEdge)
-  - #3349, Fix installation path of postgis_topology scripts
-  - #3329, Fix robustness regression in TopoGeo_addPoint
-  - #3321, Fix performance regression in topology loading
-  - Fix memory leak in lwt_ChangeEdgeGeom [liblwgeom]
-  - #3355 geography ST_Segmentize has geometry bbox 
-  - #3359, Fix toTopoGeom loss of low-id primitives from TopoGeometry
-           definition
+  - #3355, geography ST_Segmentize has geometry bbox 
+  - #3359, Fix toTopoGeom loss of low-id primitives from
+           TopoGeometry definition
   - #3360, _raster_constraint_info_scale invalid input syntax
   - #3375, crash in repeated point removal for collection(point)
+  - #3378, Fix handling of hierarchical TopoGeometries
+           in presence of multiple topologies
+  - #3380, #3402, Decimate lines on topology load
+  - #3388, #3410, Fix missing end-points in ST_RemoveRepeatedPoints
+  - #3389, Buffer overflow in lwgeom_to_geojson
+  - #3390, Compilation under Alpine Linux 3.2 gives an error when
+           compiling the postgis and postgis_topology extensions
+  - #3393, ST_Area NaN for some polygons
+  - #3401, Improve ST_Split robustness on 32bit systems
+  - #3404, ST_ClusterWithin crashes backend
+  - #3407, Fix crash on splitting a face or an edge
+           defining multiple TopoGeometry objects
+  - #3411, Clustering functions not using spatial index
+  - #3412, Improve robustness of snapping step in TopoGeo_addLinestring
+  - #3415, Fix OSX 10.9 build under pkgsrc
+  - Fix memory leak in lwt_ChangeEdgeGeom [liblwgeom]
 
 
 PostGIS 2.2.0
@@ -94,6 +120,7 @@ PostGIS 2.2.0
   - #2349, Support for encoded_polyline input/output (Kashif Rasul)
   - #2159, report libjson version from postgis_full_version()
   - #2770, ST_MemSize(raster)
+  - #2093, ST_Simplify(geom, tol, preserveCollapsed) new parameter
   - Add postgis_noop(raster)
   - Added missing variants of ST_TPI(), ST_TRI() and ST_Roughness()
   - Added GUC postgis.gdal_enabled_drivers to specify GDAL config
