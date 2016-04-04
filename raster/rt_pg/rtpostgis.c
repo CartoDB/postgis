@@ -153,6 +153,89 @@ void _PG_init(void);
 
 #define RT_MSG_MAXLEN 256
 
+
+/* ---------------------------------------------------------------- */
+/*  Memory allocation / error reporting hooks                       */
+/* ---------------------------------------------------------------- */
+
+static void *
+rt_pg_alloc(size_t size)
+{
+    void * result;
+
+    POSTGIS_RT_DEBUGF(5, "rt_pgalloc(%ld) called", (long int) size);
+
+    result = palloc(size);
+
+    return result;
+}
+
+static void *
+rt_pg_realloc(void *mem, size_t size)
+{
+    void * result;
+
+    POSTGIS_RT_DEBUGF(5, "rt_pg_realloc(%ld) called", (long int) size);
+
+    if (mem)
+        result = repalloc(mem, size);
+
+    else
+        result = palloc(size);
+
+    return result;
+}
+
+static void
+rt_pg_free(void *ptr)
+{
+    POSTGIS_RT_DEBUG(5, "rt_pfree called");
+    pfree(ptr);
+}
+
+static void rt_pg_error(const char *fmt, va_list ap)
+  __attribute__(( format(printf,1,0) ));
+
+static void
+rt_pg_error(const char *fmt, va_list ap)
+{
+    char errmsg[RT_MSG_MAXLEN+1];
+
+    vsnprintf (errmsg, RT_MSG_MAXLEN, fmt, ap);
+
+    errmsg[RT_MSG_MAXLEN]='\0';
+    ereport(ERROR, (errmsg_internal("%s", errmsg)));
+}
+
+static void rt_pg_notice(const char *fmt, va_list ap)
+  __attribute__(( format(printf,1,0) ));
+
+static void
+rt_pg_notice(const char *fmt, va_list ap)
+{
+    char msg[RT_MSG_MAXLEN+1];
+
+    vsnprintf (msg, RT_MSG_MAXLEN, fmt, ap);
+
+    msg[RT_MSG_MAXLEN]='\0';
+    ereport(NOTICE, (errmsg_internal("%s", msg)));
+}
+
+static void rt_pg_debug(const char *fmt, va_list ap)
+  __attribute__(( format(printf,1,0) ));
+
+static void
+rt_pg_debug(const char *fmt, va_list ap)
+{
+    char msg[RT_MSG_MAXLEN+1];
+
+    vsnprintf (msg, RT_MSG_MAXLEN, fmt, ap);
+
+    msg[RT_MSG_MAXLEN]='\0';
+    ereport(DEBUG1, (errmsg_internal("%s", msg)));
+}
+
+
 /* ---------------------------------------------------------------- */
 /*  PostGIS raster GUCs                                             */
 /* ---------------------------------------------------------------- */
@@ -331,6 +414,12 @@ _PG_init(void) {
 	char *env_postgis_enable_outdb_rasters = NULL;
 	bool boot_postgis_enable_outdb_rasters = false;
 
+	/* Install liblwgeom handlers */
+	pg_install_lwgeom_handlers();
+
+	/* Install rtcore handlers */
+	rt_set_handlers(rt_pg_alloc, rt_pg_realloc, rt_pg_free, rt_pg_error, rt_pg_debug, rt_pg_notice);
+
 	/*
 	 use POSTGIS_GDAL_ENABLED_DRIVERS to set the bootValue
 	 of GUC postgis.gdal_enabled_drivers
@@ -378,13 +467,7 @@ _PG_init(void) {
 		boot_postgis_enable_outdb_rasters ? "TRUE" : "FALSE"
 	);
 
-	/* Install liblwgeom handlers */
-	pg_install_lwgeom_handlers();
-
-	/* TODO: Install raster callbacks (see rt_init_allocators)??? */
-
 	/* Define custom GUC variables. */
-
 	DefineCustomStringVariable(
 		"postgis.gdal_datapath", /* name */
 		"Path to GDAL data files.", /* short_desc */
@@ -432,95 +515,4 @@ _PG_init(void) {
 
 	/* free memory allocations */
 	pfree(boot_postgis_gdal_enabled_drivers);
-}
-
-/* ---------------------------------------------------------------- */
-/*  Memory allocation / error reporting hooks                       */
-/*  TODO: reuse the ones in libpgcommon ?                           */
-/* ---------------------------------------------------------------- */
-
-static void *
-rt_pg_alloc(size_t size)
-{
-    void * result;
-
-    POSTGIS_RT_DEBUGF(5, "rt_pgalloc(%ld) called", (long int) size);
-
-    result = palloc(size);
-
-    return result;
-}
-
-static void *
-rt_pg_realloc(void *mem, size_t size)
-{
-    void * result;
-
-    POSTGIS_RT_DEBUGF(5, "rt_pg_realloc(%ld) called", (long int) size);
-
-    if (mem)
-        result = repalloc(mem, size);
-
-    else
-        result = palloc(size);
-
-    return result;
-}
-
-static void
-rt_pg_free(void *ptr)
-{
-    POSTGIS_RT_DEBUG(5, "rt_pfree called");
-    pfree(ptr);
-}
-
-static void rt_pg_error(const char *fmt, va_list ap)
-  __attribute__(( format(printf,1,0) ));
-
-static void
-rt_pg_error(const char *fmt, va_list ap)
-{
-    char errmsg[RT_MSG_MAXLEN+1];
-
-    vsnprintf (errmsg, RT_MSG_MAXLEN, fmt, ap);
-
-    errmsg[RT_MSG_MAXLEN]='\0';
-    ereport(ERROR, (errmsg_internal("%s", errmsg)));
-}
-
-static void rt_pg_notice(const char *fmt, va_list ap)
-  __attribute__(( format(printf,1,0) ));
-
-static void
-rt_pg_notice(const char *fmt, va_list ap)
-{
-    char msg[RT_MSG_MAXLEN+1];
-
-    vsnprintf (msg, RT_MSG_MAXLEN, fmt, ap);
-
-    msg[RT_MSG_MAXLEN]='\0';
-    ereport(NOTICE, (errmsg_internal("%s", msg)));
-}
-
-static void rt_pg_debug(const char *fmt, va_list ap)
-  __attribute__(( format(printf,1,0) ));
-
-static void
-rt_pg_debug(const char *fmt, va_list ap)
-{
-    char msg[RT_MSG_MAXLEN+1];
-
-    vsnprintf (msg, RT_MSG_MAXLEN, fmt, ap);
-
-    msg[RT_MSG_MAXLEN]='\0';
-    ereport(DEBUG1, (errmsg_internal("%s", msg)));
-}
-
-
-void
-rt_init_allocators(void)
-{
-    /* raster callback - install raster handlers */
-    rt_set_handlers(rt_pg_alloc, rt_pg_realloc, rt_pg_free, rt_pg_error,
-            rt_pg_debug, rt_pg_notice);
 }
