@@ -721,6 +721,74 @@ LWGEOM *mvt_geom(LWGEOM *lwgeom, GBOX *gbox, uint32_t extent, uint32_t buffer,
 }
 
 /**
+ * Transform a point geometry into vector tile coordinate space.
+ */
+LWGEOM *mvt_geom_point(LWPOINT *lwgeom, GBOX *gbox, uint32_t extent, uint32_t buffer,
+	bool clip_geom)
+{
+	POSTGIS_DEBUG(2, "mvt_geom called");
+	LWGEOM *lwgeom_out = NULL;
+	double width = gbox->xmax - gbox->xmin;
+	double height = gbox->ymax - gbox->ymin;
+	double resx = width / extent;
+	double resy = height / extent;
+	double fx = extent / width;
+	double fy = -(extent / height);
+	double buffer_map_xunits = resx * buffer;
+	double buffer_map_yunits = resy * buffer;
+	const GBOX *ggbox = lwgeom_get_bbox(lwgeom);
+
+	if (width == 0 || height == 0)
+		lwerror("mvt_geom: bounds width or height cannot be 0");
+
+	if (extent == 0)
+		lwerror("mvt_geom: extent cannot be 0");
+
+	if (clip_geom) {
+		GBOX *bgbox = gbox_copy(gbox);
+		gbox_expand(bgbox, buffer_map_xunits);
+		if (!gbox_overlaps_2d(ggbox, bgbox)) {
+			POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
+			return NULL;
+		}
+		if (!gbox_contains_2d(bgbox, ggbox)) {
+			double x0 = bgbox->xmin;
+			double y0 = bgbox->ymin;
+			double x1 = bgbox->xmax;
+			double y1 = bgbox->ymax;
+#if POSTGIS_GEOS_VERSION < 35
+			LWPOLY *lwenv = lwpoly_construct_envelope(0, x0, y0, x1, y1);
+			lwgeom_out = lwgeom_intersection(lwgeom, lwpoly_as_lwgeom(lwenv));
+			lwpoly_free(lwenv);
+#else
+			lwgeom_out = lwgeom_clip_by_rect(lwgeom, x0, y0, x1, y1);
+#endif
+			POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
+			if (lwgeom_out == NULL || lwgeom_is_empty(lwgeom_out))
+				return NULL;
+		}
+	}
+
+	if (lwgeom_out == NULL)
+		lwgeom_out = lwpoint_clone((LWPOINT *)lwgeom);
+
+	AFFINE affine;
+	memset (&affine, 0, sizeof(affine));
+	affine.afac = fx;
+	affine.efac = fy;
+	affine.ifac = 1;
+	affine.xoff = -gbox->xmin * fx;
+	affine.yoff = -gbox->ymax * fy;
+
+	lwgeom_affine(lwgeom_out, &affine);
+
+	if (lwgeom_out == NULL || lwgeom_is_empty(lwgeom_out))
+		return NULL;
+
+        return lwgeom_out;
+}
+
+/**
  * Initialize aggregation context.
  */
 void mvt_agg_init_context(struct mvt_agg_context *ctx)

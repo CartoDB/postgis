@@ -60,7 +60,14 @@ Datum ST_AsMVTGeom(PG_FUNCTION_ARGS)
 	extent = PG_ARGISNULL(2) ? 4096 : PG_GETARG_INT32(2);
 	buffer = PG_ARGISNULL(3) ? 0 : PG_GETARG_INT32(3);
 	clip_geom = PG_ARGISNULL(4) ? true : PG_GETARG_BOOL(4);
-	lwgeom_out = mvt_geom(lwgeom_in, bounds, extent, buffer, clip_geom);
+	switch(lwgeom_in->type) {
+	case POINTTYPE:
+		lwgeom_out = mvt_geom_point(lwgeom_in, bounds, extent, buffer, clip_geom);
+		break;
+	default:
+		lwgeom_out = mvt_geom(lwgeom_in, bounds, extent, buffer, clip_geom);
+		break;
+	}
 	lwgeom_free(lwgeom_in);
 	if (lwgeom_out == NULL)
 		PG_RETURN_NULL();
