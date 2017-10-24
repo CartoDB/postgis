@@ -3544,6 +3544,7 @@ CREATE OR REPLACE FUNCTION ST_Combine_BBox(box2d,geometry)
 
 
 -- Availability: 1.2.2
+-- Changed: 2.2.0 to use non-deprecated ST_CombineBBox (r13535)
 CREATE AGGREGATE ST_Extent(
 	sfunc = ST_CombineBBox,
 	finalfunc = box2d,
@@ -3552,6 +3553,7 @@ CREATE AGGREGATE ST_Extent(
 	);
 
 -- Availability: 2.0.0
+-- Changed: 2.2.0 to use non-deprecated ST_CombineBBox (r13535)
 CREATE AGGREGATE ST_3DExtent(
 	sfunc = ST_CombineBBox,
 	basetype = geometry,
@@ -5449,7 +5451,7 @@ $$
 	cavept geometry[];
 	seglength double precision;
 	var_tempgeom geometry;
-	scale_factor integer := 1;
+	scale_factor float := 1;
 	i integer;
 	
 	BEGIN
@@ -5576,8 +5578,10 @@ $$
 					var_tempgeom := ST_ForceSFS(ST_Intersection(var_tempgeom, var_convhull));
 					IF param_allow_holes THEN
 						var_param_geom := var_tempgeom;
-					ELSE
+					ELSIF ST_GeometryType(var_tempgeom) = 'ST_Polygon' THEN
 						var_param_geom := ST_MakePolygon(ST_ExteriorRing(var_tempgeom));
+					ELSE
+						var_param_geom := ST_ConvexHull(var_tempgeom);
 					END IF;
 					return var_param_geom;
 				ELSIF ST_IsValid(var_tempgeom) THEN

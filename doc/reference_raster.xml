@@ -6423,12 +6423,17 @@ SELECT ST_PixelWidth(ST_Rescale(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.
 					<title>Examples</title>
 					<para>A simple example reskewing a raster from a skew of 0.0 to a skew of 0.0015.</para>
 					
-					<programlisting>-- the original raster pixel size
-SELECT ST_Rotation(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0))
+					<programlisting>-- the original raster non-rotated
+SELECT ST_Rotation(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0));
+
+-- result
+0
 					
--- the rescaled raster raster pixel size
-SELECT ST_Rotation(ST_Reskew(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0), 0.0015))
-                    </programlisting>
+-- the reskewed raster raster rotation
+SELECT ST_Rotation(ST_Reskew(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0), 0.0015));
+
+-- result
+-0.982793723247329</programlisting>
 					
 			</refsection>
 
@@ -6506,12 +6511,16 @@ SELECT ST_Rotation(ST_Reskew(ST_AddBand(ST_MakeEmptyRaster(100, 100, 0, 0, 0.001
 					<title>Examples</title>
 					<para>A simple example snapping a raster to a slightly different grid.</para>
 					
-					<programlisting>-- the original raster pixel size
-SELECT ST_UpperLeftX(ST_AddBand(ST_MakeEmptyRaster(10, 10, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0))
+					<programlisting>-- the original raster upper left X
+SELECT ST_UpperLeftX(ST_AddBand(ST_MakeEmptyRaster(10, 10, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0));
+-- result
+0
 					
--- the rescaled raster raster pixel size
-SELECT ST_UpperLeftX(ST_SnapToGrid(ST_AddBand(ST_MakeEmptyRaster(10, 10, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0), 0.0002, 0.0002))
-                    </programlisting>
+-- the upper left of raster after snapping
+SELECT ST_UpperLeftX(ST_SnapToGrid(ST_AddBand(ST_MakeEmptyRaster(10, 10, 0, 0, 0.001, -0.001, 0, 0, 4269), '8BUI'::text, 1, 0), 0.0002, 0.0002));
+
+--result
+-0.0008</programlisting>
 					
 			</refsection>
 
@@ -8242,7 +8251,7 @@ SELECT ST_AsJPEG(rast,ARRAY[2,1,3],ARRAY['QUALITY=90','PROGRESSIVE=ON']) As rast
                     </listitem>
                     <listitem>
                       <para>
-                        <varname>nbands</varname> is an array of bands to export (note that max is 3 for PNG) and the order of the bands is RGB. e.g ARRAY[3,2,1] means map band 3 to Red, band 2 to green and band 1 to blue
+                        <varname>nbands</varname> is an array of bands to export (note that max is 4 for PNG) and the order of the bands is RGBA. e.g ARRAY[3,2,1] means map band 3 to Red, band 2 to green and band 1 to blue
                       </para>
                     </listitem>
                    <listitem>
@@ -10776,7 +10785,7 @@ WHERE rid=167;
 					<para>Passing a <type>regprodedure</type> argument to a SQL function requires the full function signature to be passed, then cast to a <type>regprocedure</type> type. To pass the above example PL/pgSQL function as an argument, the SQL for the argument is:<programlisting>'simple_function(double precision, double precision, integer[], text[])'::regprocedure</programlisting>Note that the argument contains the name of the function, the types of the function arguments, quotes around the name and argument types, and a cast to a <type>regprocedure</type>.
 					</para>
 
-					<para>The third argument to the <varname>tworastuserfunc</varname> is a <type>variadic text</type> array. All trailing text arguments to any <xref linkend="RT_ST_MapAlgebraFct2" /> call are passed through to the specified <varname>tworastuserfunc</varname>, and are contained in the <varname>userargs</varname> argument.
+					<para>The fourth argument to the <varname>tworastuserfunc</varname> is a <type>variadic text</type> array. All trailing text arguments to any <xref linkend="RT_ST_MapAlgebraFct2" /> call are passed through to the specified <varname>tworastuserfunc</varname>, and are contained in the <varname>userargs</varname> argument.
 					</para>
 
 					<note>
@@ -13177,8 +13186,7 @@ MULTIPOLYGON(((3427928 5793243.85,3427928 5793243.8,3427928 5793243.75,3427927.8
 			overlaps or is to the left of the bounding box of raster B, or more accurately, overlaps or is NOT to the right
 			of the bounding box of raster B.</para>
 
-			<note><para>This operand will make use of any indexes that may be available on the
-				geometries.</para></note>
+			<note><para>This operand will make use of any indexes that may be available on the rasters.</para></note>
 		  </refsection>
 
 		  <refsection>

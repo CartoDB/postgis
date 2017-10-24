@@ -467,7 +467,7 @@ LWGEOM2GEOS(const LWGEOM *lwgeom, int autofix)
 			g = LWGEOM2GEOS(lwc->geoms[i], 0);
 			if ( ! g )
 			{
-				while (i) GEOSGeom_destroy(geoms[--i]);
+				while (j) GEOSGeom_destroy(geoms[--j]);
 				free(geoms);
 				return NULL;
 			}
@@ -967,7 +967,7 @@ lwgeom_clip_by_rect(const LWGEOM *geom1, double x0, double y0, double x1, double
 #if POSTGIS_GEOS_VERSION < 35
 	lwerror("The GEOS version this postgis binary "
 	        "was compiled against (%d) doesn't support "
-	        "'GEOSClipByRect' function (3.3.5+ required)",
+	        "'GEOSClipByRect' function (3.5.0+ required)",
 	        POSTGIS_GEOS_VERSION);
 	return NULL;
 #else /* POSTGIS_GEOS_VERSION >= 35 */

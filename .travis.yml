@@ -22,6 +22,7 @@ compiler: gcc
 script:
   - ./configure
   - make
+  - find /home/travis -type d -exec chmod 755 {} \;
   - make check
   - sudo make install
   - make installcheck

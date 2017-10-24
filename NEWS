@@ -1,8 +1,60 @@
-PostGIS 2.2.3
-2016/XX/XX
+PostGIS 2.2.7
+2018/xx/xx
 
  * Bug Fixes *
 
+
+
+PostGIS 2.2.6
+2017/10/18
+
+ * Bug Fixes *
+  - #3786, ptarray null and heap issues on is_closed
+  - #3774, Trigonometric length for CompoundCurves
+  - #3731, Crash on very small table of homogenous data
+  - #2836, Receiving ERROR: ExteriorRing: geom is
+           not a polygon with ST_ConcaveHull
+  - #3866, Rare crash generating TWKB with large coordinate values
+  - #3869, Fix build with "gold" linker
+  - #3879, Division by zero in some arc cases
+  - #3878, Single defn of signum in header
+  - #3880, Undefined behaviour in TYPMOD_GET_SRID
+  - #3875, Fix undefined behaviour in shift operation
+  - #3874, lw_dist2d_pt_arc division by zero
+  - #3882, undefined behaviour in zigzag with negative inputs
+  - #3891, undefined behaviour in pointarray_to_encoded_polyline
+  - #3895, throw error on malformed WKB input
+  - #3907, Allocate enough space for all possible GBOX string outputs (Raúl Marín Rodríguez)
+
+
+PostGIS 2.2.5
+2017/01/29
+
+ * Bug Fixes *
+ - #3418, KNN recheck in 9.5+ fails with index returned tuples in wrong order
+ - #3680, PostGIS upgrade scripts missing GRANT for views
+
+PostGIS 2.2.4
+2016/11/26
+
+ * Bug Fixes *
+
+ - #1973, st_concavehull() returns sometimes empty geometry collection
+          Fix from gde
+ - #3656, Fix upgrade of aggregates from 2.2 or lower version
+ - #3501, add raster constraint max extent exceeds array size limit
+        for large tables, change to use ST_Extent
+ - #3659, Crash caused by raster GUC define after CREATE EXTENSION
+     using wrong memory context. (manaeem)
+
+
+PostGIS 2.2.3
+2016/10/06
+
+ * Bug Fixes *
+
+  - #3615, Fix schema support in RT_CreateOveriew (Cait Smith)
+  - #3628, Fix lack of support for capitalized-Y in SwapOrdinates
   - #3524, Add interruptibility to geography brute-force distance 
            calculation
   - #3522, Handle POINT and MULTIPOINT correctly in ST_Subdivide
@@ -11,7 +63,30 @@ PostGIS 2.2.3
            for shp2pgsql-gui (Sebastiaan Couwenberg)
   - #3573, Operator <<->> incorrectly calculates m distance
   - #3579, Crash in LWGEOM2GEOS
-
+  - #3515, tiger_data not being backed up
+  - #3569, Incorrect coordinates returned by ST_CollectionHomogenize
+           (Dan Baston)
+  - #3602, perl as found by configure is not used 
+           in tiger extension, postgis_sfcgal, address_standardizer
+  - #3604, pgcommon/Makefile.in orders CFLAGS leads to installed liblwgeom.h
+          (Greg Troxel)
+  - #3607, Fix inconsistency with multilinestring in
+           ST_LocateBetweenElevations (Artur Zakirov)
+  - #3608, Fix crash passing -W UTF-8 to shp2pgsql (Matt Amos)
+  - #3624, [raster] load_outdb related tests fail 
+           for 2.2.2 & 2.3.0-beta1 on Debian unstable
+           perl @INC fix (Sebastiaan Couwenberg)
+  - #3627, Encoded polyline functions ignore precision parameter
+           (Christian Quest / Dan Baston)
+  - #3501, use ST_Union instead of ST_Collect to compute 
+          raster max extent constraint
+  - #3640, Interpolate_from_address sometimes results in "" invalid for numeric
+  - #3641, Tiger normalize, pagc_normalize integer out of range
+  - #3644, Deadlock on interrupt
+  - #3542, Crash on Geometry(MultiCurve())
+  - Numerous documentation corrections from ruvyn
+  - #3652, Segmentation fault during operations on GEOMETRYCOLLECTION 
+     with MULTICURVE geometry inside
 
 PostGIS 2.2.2
 2016/03/22
@@ -32,8 +107,8 @@ PostGIS 2.2.2
            platforms
   - #3460, ST_ClusterWithin 'Tolerance not defined' error after upgrade
   - #3490, Raster data restore issues, materialized views
-  		   Scripts postgis_proc_set_search_path.sql, rtpostgis_proc_set_search_path.sql
-  		   refere to http://postgis.net/docs/manual-2.2/RT_FAQ.html#faq_raster_data_not_restore
+           Scripts postgis_proc_set_search_path.sql, rtpostgis_proc_set_search_path.sql
+           refere to http://postgis.net/docs/manual-2.2/RT_FAQ.html#faq_raster_data_not_restore
   - #3426, failing POINT EMPTY tests on fun architectures
 
 PostGIS 2.2.1
@@ -213,7 +288,7 @@ PostGIS 2.2.0
            max extent constraint
   - #3018, GROUP BY geography sometimes returns duplicate rows
   - #3020, ST_AddBand out-db bug where height using width value
-  - #3048, shp2pgsql - illegal number format when specific system locale set
+  - #3084, shp2pgsql - illegal number format when specific system locale set
   - #3061, Allow duplicate points in JSON, GML, GML ST_GeomFrom* functions
   - #3086, ST_DumpValues() crashes backend on cleanup with invalid
            band indexes
@@ -256,7 +331,7 @@ PostGIS 2.1.6
 
   - #3000, Ensure edge splitting and healing algorithms use indexes
   - #3048, Speed up geometry simplification (J.Santana @ CartoDB)
-  - #3050, Speep up geometry type reading (J.Santana @ CartoDB)
+  - #3050, Speed up geometry type reading (J.Santana @ CartoDB)
 
  * Bug Fixes *
 

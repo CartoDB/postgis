@@ -66,13 +66,6 @@ static void point_rad2deg(GEOGRAPHIC_POINT *p)
 	p->lon = rad2deg(p->lon);
 }
 
-static void test_signum(void)
-{
-	CU_ASSERT_EQUAL(signum(-5.0),-1);
-	CU_ASSERT_EQUAL(signum(5.0),1);
-}
-
-
 static void test_sphere_direction(void)
 {
 	GEOGRAPHIC_POINT s, e;
@@ -1576,6 +1569,28 @@ static void test_lwgeom_area_sphere(void)
 	/* end #3393 */
 }
 
+static void test_gbox_to_string_truncated(void)
+{
+	GBOX g = {
+		.flags = 0,
+		.xmin = -DBL_MAX,
+		.xmax = -DBL_MAX,
+		.ymin = -DBL_MAX,
+		.ymax = -DBL_MAX,
+		.zmin = -DBL_MAX,
+		.zmax = -DBL_MAX,
+		.mmin = -DBL_MAX,
+		.mmax = -DBL_MAX,
+	};
+	FLAGS_SET_Z(g.flags, 1);
+	FLAGS_SET_M(g.flags, 1);
+	char *c = gbox_to_string(&g);
+
+	ASSERT_STRING_EQUAL(c, "GBOX((-1.7976931e+308,-1.7976931e+308,-1.7976931e+308,-1.7976931e+308),(-1.7976931e+308,-1.7976931e+308,-1.7976931e+308,-1.7976931e+308))");
+
+	lwfree(c);
+}
+
 /*
 ** Used by test harness to register the tests in this file.
 */
@@ -1586,7 +1601,6 @@ void geodetic_suite_setup(void)
 	PG_ADD_TEST(suite, test_sphere_direction);
 	PG_ADD_TEST(suite, test_sphere_project);
 	PG_ADD_TEST(suite, test_lwgeom_area_sphere);
-	PG_ADD_TEST(suite, test_signum);
 	PG_ADD_TEST(suite, test_gbox_from_spherical_coordinates);
 	PG_ADD_TEST(suite, test_gserialized_get_gbox_geocentric);
 	PG_ADD_TEST(suite, test_clairaut);
@@ -1606,4 +1620,5 @@ void geodetic_suite_setup(void)
 	PG_ADD_TEST(suite, test_lwgeom_segmentize_sphere);
 	PG_ADD_TEST(suite, test_ptarray_contains_point_sphere);
 	PG_ADD_TEST(suite, test_ptarray_contains_point_sphere_iowa);
+	PG_ADD_TEST(suite, test_gbox_to_string_truncated);
 }

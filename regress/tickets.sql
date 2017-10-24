@@ -906,6 +906,13 @@ SELECT '#2870', ST_Summary('Point(151.215289 -33.856885)'::geometry::bytea::geog
 
 SELECT '#2956', st_astwkb(null,0) is null;
 
+-- #2965 --
+CREATE TABLE test_analyze_crash (a integer not null, g geometry);
+INSERT INTO test_analyze_crash values (1, '0102000020E6100000010000006D1092A47FF33440AD4ECD9B00334A40');
+ANALYZE test_analyze_crash;
+SELECT '#2965', ST_AsText(g) FROM test_analyze_crash;
+DROP TABLE test_analyze_crash;
+
 -- #3119 --
 SELECT '#3119a', floor(ST_LengthSpheroid('SRID=4326;LINESTRING (-72.640965 42.11867, -72.6395 42.1187)', 'SPHEROID["GRS_1980",6378137,298.257222101]'));
 -- polygons are also handled
@@ -950,6 +957,13 @@ SELECT '#3470b', ST_Area(ST_Polygonize(ARRAY[NULL, 'LINESTRING (0 0, 10 0, 10 10
 -- #3565
 SELECT '#3565',ST_SetPoint(st_geomfromtext('LINESTRING EMPTY'), 0, ST_MakePoint(1,1));
 
+-- #3569
+WITH clustr AS (
+      SELECT ST_Polygonize(ST_MakeEnvelope(1, 2, 3, 4)) AS geom
+    )
+    SELECT '#3569', ST_CollectionHomogenize(geom)::box2d
+    FROM clustr;
+
 -- #3579
 with
         params as (
@@ -973,6 +987,13 @@ select
 -- should be false
     ST_Intersects(ST_Buffer(road.geom, sidewalk_offset + epsilon), sidewalks.geom) -- should be true
 from road, sidewalks, params;
+
+-- #3583
+Select '#3583', ST_AsText(ST_GeomFromGeoJSON('{"type":"MultiPolygon", "coordinates":[[[139.10030364990232,35.16777444430609],5842.4224490305424]]}')); 
+
+-- #3627
+SELECT '#3627a', ST_AsEncodedPolyline('SRID=4326;LINESTRING(-0.250691 49.283048,-0.250633 49.283376,-0.250502 49.283972,-0.251245 49.284028,-0.251938 49.284232,-0.251938 49.2842)', 6);
+SELECT '#3627b', ST_Equals(geom, ST_LineFromEncodedPolyline(ST_AsEncodedPolyline(geom, 7), 7)) FROM (VALUES ('SRID=4326;LINESTRING (0 0, 1 1)')) AS v (geom);
 
 -- Clean up
 DELETE FROM spatial_ref_sys;

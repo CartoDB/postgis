@@ -2584,14 +2584,17 @@ Datum ST_CollectionHomogenize(PG_FUNCTION_ARGS)
 
 	lwoutput = lwgeom_homogenize(lwgeom);
 	lwgeom_free(lwgeom);
-	PG_FREE_IF_COPY(input, 0);
 
 	if ( ! lwoutput )
+	{
 		PG_RETURN_NULL();
+		PG_FREE_IF_COPY(input, 0);
+	}
 
 	output = geometry_serialize(lwoutput);
 	lwgeom_free(lwoutput);
 
+	PG_FREE_IF_COPY(input, 0);
 	PG_RETURN_POINTER(output);
 }
 
@@ -2639,7 +2642,7 @@ Datum ST_FlipCoordinates(PG_FUNCTION_ARGS)
 static LWORD ordname2ordval(char n)
 {
   if ( n == 'x' || n == 'X' ) return LWORD_X;
-  if ( n == 'y' || n == 'y' ) return LWORD_Y;
+  if ( n == 'y' || n == 'Y' ) return LWORD_Y;
   if ( n == 'z' || n == 'Z' ) return LWORD_Z;
   if ( n == 'm' || n == 'M' ) return LWORD_M;
   lwpgerror("Invalid ordinate name '%c'. Expected x,y,z or m", n);

@@ -2,13 +2,101 @@
 <appendix id="release_notes">
   <title>Appendix</title>
     <subtitle>Release Notes</subtitle>
+    <sect1>
+      <title>Release 2.2.6</title>
+        <para>Release date: 2017/10/18</para>
+        <para>This is a bug fix and performance improvement release.</para>
+        <simplesect>
+            <title>Bug Fixes and Enhancements</title>
+            <para>#3786, ptarray null and heap issues on is_closed</para>
+            <para>#3774, Trigonometric length for CompoundCurves</para>
+            <para>#3731, Crash on very small table of homogenous data</para>
+            <para>#2836, Receiving ERROR: ExteriorRing: geom is not a polygon with ST_ConcaveHull</para>
+            <para>#3866, Rare crash generating TWKB with large coordinate values</para>
+            <para>#3869, Fix build with "gold" linker</para>
+            <para>#3879, Division by zero in some arc cases</para>
+            <para>#3878, Single defn of signum in header</para>
+            <para>#3880, Undefined behaviour in TYPMOD_GET_SRID</para>
+            <para>#3875, Fix undefined behaviour in shift operation</para>
+            <para>#3874, lw_dist2d_pt_arc division by zero</para>
+            <para>#3882, undefined behaviour in zigzag with negative inputs</para>
+            <para>#3891, undefined behaviour in pointarray_to_encoded_polyline</para>
+            <para>#3895, throw error on malformed WKB input</para>
+            <para>#3907, Allocate enough space for all possible GBOX string outputs (Raúl Marín Rodríguez)</para>            
+        </simplesect>
+    </sect1>
+    <sect1>
+      <title>Release 2.2.5</title>
+        <para>Release date: 2017/01/30</para>
+        <para>This is a bug fix and performance improvement release.</para>
+        <simplesect>
+            <title>Bug Fixes and Enhancements</title>
+            <para>3418, KNN recheck in 9.5+ fails with index returned tuples in wrong order</para>
+            <para>3680, PostGIS upgrade scripts missing GRANT for views</para>
+        </simplesect>
+    </sect1>
+    <sect1>
+      <title>Release 2.2.4</title>
+        <para>Release date: 2016/11/26</para>
+        <para>This is a bug fix and performance improvement release.</para>
+        <simplesect>
+            <title>Bug Fixes and Enhancements</title>
+            <para>1973, st_concavehull() returns sometimes empty geometry collection
+                            Fix from gde</para>
+            <para>3656, Fix upgrade of aggregates from 2.2 or lower version</para>
+            <para>3501, add raster constraint max extent exceeds array size limit
+                        for large tables, change to use ST_Extent</para>
+            <para>3659, Crash caused by raster GUC define after CREATE EXTENSION
+                 using wrong memory context. (manaeem)</para>
+        </simplesect>
+    </sect1>
+    <sect1>
+      <title>Release 2.2.3</title>
+        <para>Release date: 2016/10/06</para>
+        <para>This is a bug fix and performance improvement release.</para>
+        <simplesect>
+            <title>Bug Fixes and Enhancements</title>
+            <para>3615, Fix schema support in RT_CreateOveriew (Cait Smith)</para>
+            <para>3628, Fix lack of support for capitalized-Y in SwapOrdinates</para>
+            <para>3524, Add interruptibility to geography brute-force distance 
+                       calculation</para>
+            <para>3522, Handle POINT and MULTIPOINT correctly in ST_Subdivide</para>
+            <para>3565, ST_SetPoint can crash backend</para>
+            <para>3571, Install desktop file and application icons 
+                       for shp2pgsql-gui (Sebastiaan Couwenberg)</para>
+            <para>3573, Operator &lt;&lt;-&gt;&gt; incorrectly calculates m distance</para>
+            <para>3579, Crash in LWGEOM2GEOS</para>
+            <para>3515, tiger_data not being backed up</para>
+            <para>3569, Incorrect coordinates returned by ST_CollectionHomogenize
+                       (Dan Baston)</para>
+            <para>3602, perl as found by configure is not used 
+                       in tiger extension, postgis_sfcgal, address_standardizer</para>
+            <para>3604, pgcommon/Makefile.in orders CFLAGS leads to installed liblwgeom.h
+                      (Greg Troxel)</para>
+            <para>3607, Fix inconsistency with multilinestring in
+                       ST_LocateBetweenElevations (Artur Zakirov)</para>
+            <para>3608, Fix crash passing -W UTF-8 to shp2pgsql (Matt Amos)</para>
+            <para>3624, [raster] load_outdb related tests fail 
+                       for 2.2.2 &amp; 2.3.0-beta1 on Debian unstable
+                       perl @INC fix (Sebastiaan Couwenberg)</para>
+            <para>3627, Encoded polyline functions ignore precision parameter
+                       (Christian Quest / Dan Baston)</para>
+            <para>3501, use ST_Union instead of ST_Collect to compute 
+                      raster max extent constraint</para>
+            <para>3640, Interpolate_from_address sometimes results in "" invalid for numeric</para>
+            <para>3641, Tiger normalize, pagc_normalize integer out of range</para>
+            <para>3644, Deadlock on interrupt</para>
+            <para>3542, Crash on Geometry(MultiCurve())</para>
+            <para>Numerous documentation corrections from ruvyn</para>
+        </simplesect>
+    </sect1>
 
     <sect1>
       <title>Release 2.2.2</title>
         <para>Release date: 2016/03/22</para>
         <para>This is a bug fix and performance improvement release.</para>
   		  <simplesect>
-  			  <title>New Features</title>
+  			  <title>Bug Fixes and Enhancments</title>
           <para>#3463, Fix crash on face-collapsing edge change</para>
           <para>#3422, Improve ST_Split robustness on standard precision double systems (arm64, ppc64el, s390c, powerpc, ...)</para>
           <para>#3427, Update spatial_ref_sys to EPSG version 8.8</para>
@@ -147,7 +235,7 @@
         <title>Bug Fixes</title>
         <para>#3159, do not force a bbox cache on ST_Affine</para>
         <para>#3018, GROUP BY geography sometimes returns duplicate rows</para>
-        <para>#3048, shp2pgsql - illegal number format when specific system locale set</para>
+        <para>#3084, shp2pgsql - illegal number format when specific system locale set</para>
         <para>#3094, Malformed GeoJSON inputs crash backend</para>
         <para>#3104, st_asgml introduces random characters in ID field</para>
         <para>#3155, Remove liblwgeom.h on make uninstall</para>
@@ -176,7 +264,7 @@
         <title>Enhancements</title>
         <para>#3000, Ensure edge splitting and healing algorithms use indexes</para>
         <para>#3048, Speed up geometry simplification (J.Santana @ CartoDB)</para>
-        <para>#3050, Speep up geometry type reading (J.Santana @ CartoDB)</para>
+        <para>#3050, Speed up geometry type reading (J.Santana @ CartoDB)</para>
       </simplesect>
       <simplesect>
         <title>Bug Fixes</title>
