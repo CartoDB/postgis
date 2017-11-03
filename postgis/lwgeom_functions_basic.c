@@ -2512,8 +2512,8 @@ Datum LWGEOM_affine(PG_FUNCTION_ARGS)
 	ret = geometry_serialize(lwgeom);
 
 	/* Release memory */
-	lwgeom_free(lwgeom);
-	PG_FREE_IF_COPY(geom, 0);
+	// lwgeom_free(lwgeom);
+	// PG_FREE_IF_COPY(geom, 0);
 
 	PG_RETURN_POINTER(ret);
 }
@@ -2620,9 +2620,9 @@ Datum ST_CollectionHomogenize(PG_FUNCTION_ARGS)
 	}
 
 	output = geometry_serialize(lwoutput);
-	lwgeom_free(lwoutput);
+	// lwgeom_free(lwoutput);
 
-	PG_FREE_IF_COPY(input, 0);
+	// PG_FREE_IF_COPY(input, 0);
 	PG_RETURN_POINTER(output);
 }
 
@@ -2630,9 +2630,9 @@ Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(ST_RemoveRepeatedPoints);
 Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS)
 {
-	GSERIALIZED *g_in = PG_GETARG_GSERIALIZED_P_COPY(0);
+	GSERIALIZED *g_in = PG_GETARG_GSERIALIZED_P(0);
 	int type = gserialized_get_type(g_in);
-	GSERIALIZED *g_out;
+	GSERIALIZED *g_out, *g_copy;
 	LWGEOM *lwgeom_in = NULL;
 	double tolerance = 0.0;
 
@@ -2643,12 +2643,16 @@ Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS)
 	if ( PG_NARGS() > 1 && ! PG_ARGISNULL(1) )
 		tolerance = PG_GETARG_FLOAT8(1);
 
+	/* Take a copy */
+	g_copy = palloc(VARSIZE(g_in));
+	memcpy(g_copy, g_in, VARSIZE(g_in));
+
+	/* Work */
 	lwgeom_in = lwgeom_from_gserialized(g_in);
 	lwgeom_remove_repeated_points_in_place(lwgeom_in, tolerance);
 	g_out = geometry_serialize(lwgeom_in);
 
-	lwgeom_free(lwgeom_in);
-	PG_FREE_IF_COPY(g_in, 0);
+	// lwgeom_free(lwgeom_in);
 	PG_RETURN_POINTER(g_out);
 }
 
