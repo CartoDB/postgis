@@ -93,8 +93,8 @@ Datum LWGEOM_simplify2d(PG_FUNCTION_ARGS)
 	}
 
 	result = geometry_serialize(in);
-	lwgeom_free(in);
-	PG_FREE_IF_COPY(geom, 0);
+	// lwgeom_free(in);
+	// PG_FREE_IF_COPY(geom, 0);
 	PG_RETURN_POINTER(result);
 }
 
@@ -322,7 +322,7 @@ Datum LWGEOM_snaptogrid(PG_FUNCTION_ARGS)
 	GSERIALIZED *out_geom = NULL;
 	gridspec grid;
 
-	GSERIALIZED *in_geom = PG_GETARG_GSERIALIZED_P(0);
+	GSERIALIZED *in_geom = PG_GETARG_GSERIALIZED_P_COPY(0);
 
 	/* Set grid values to zero to start */
 	memset(&grid, 0, sizeof(gridspec));
@@ -360,7 +360,7 @@ Datum LWGEOM_snaptogrid(PG_FUNCTION_ARGS)
 	POSTGIS_DEBUGF(3, "SnapToGrid made a %s", lwtype_name(in_lwgeom->type));
 
 	out_geom = geometry_serialize(in_lwgeom);
-	lwfree(in_lwgeom);
+	// lwfree(in_lwgeom);
 	PG_RETURN_POINTER(out_geom);
 }
 
