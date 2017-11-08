@@ -1332,7 +1332,7 @@ CREATE OR REPLACE FUNCTION ST_Force3D(geometry)
 	AS 'MODULE_PATHNAME', 'LWGEOM_force_3dz'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
 	_COST_C_LOW;
-	-- cost warning!!: see #3675
+	-- cost warning!!: see https://trac.osgeo.org/postgis/ticket/3675
 
 -- Availability: 1.2.2
 -- Deprecation in 2.1.0

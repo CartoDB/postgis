@@ -692,7 +692,7 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	double height = gbox->ymax - gbox->ymin;
 	double resx = width / extent;
 	double resy = height / extent;
-	double res = resx < resy ? resx : resy;
+	double res = (resx < resy ? resx : resy)/2.0;
 	double fx = extent / width;
 	double fy = -(extent / height);
 	double buffer_map_xunits = resx * buffer;
