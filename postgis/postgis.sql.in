@@ -4315,7 +4315,7 @@ CREATE OR REPLACE FUNCTION ST_AsSVG(geom geometry,rel int4 DEFAULT 0,maxdecimald
 	RETURNS TEXT
 	AS 'MODULE_PATHNAME','LWGEOM_asSVG'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	COST 1000;
+	_COST_C_HIGH;
 
 -----------------------------------------------------------------------
 -- GML OUTPUT
@@ -4325,7 +4325,7 @@ CREATE OR REPLACE FUNCTION _ST_AsGML(int4, geometry, int4, int4, text, text)
 	RETURNS TEXT
 	AS 'MODULE_PATHNAME','LWGEOM_asGML'
 	LANGUAGE 'c' IMMUTABLE _PARALLEL
-	COST 2500;
+	_COST_C_HIGH;
 
 -- ST_AsGML(version, geom) / precision=15
 -- Availability: 1.3.2
@@ -4360,7 +4360,7 @@ CREATE OR REPLACE FUNCTION _ST_AsKML(int4,geometry, int4, text)
 	RETURNS TEXT
 	AS 'MODULE_PATHNAME','LWGEOM_asKML'
 	LANGUAGE 'c' IMMUTABLE  _PARALLEL
-	COST 5000;
+	_COST_C_HIGH;
 
 -- Availability: 1.2.2
 -- Changed: 2.0.0 to use default args and allow named args
@@ -4389,7 +4389,7 @@ CREATE OR REPLACE FUNCTION ST_AsGeoJson(geom geometry, maxdecimaldigits int4 DEF
 	RETURNS TEXT
 	AS 'MODULE_PATHNAME','LWGEOM_asGeoJson'
 	LANGUAGE 'c' IMMUTABLE STRICT  _PARALLEL
-	COST 1000;
+	_COST_C_HIGH;
 
 -- _ST_AsGeoJson(version, geom, precision, options)
 CREATE OR REPLACE FUNCTION _ST_AsGeoJson(int4, geometry, int4, int4)
@@ -4518,7 +4518,8 @@ CREATE AGGREGATE ST_AsMVT(anyelement, text, int4, text)
 CREATE OR REPLACE FUNCTION ST_AsMVTGeom(geom geometry, bounds box2d, extent int4 default 4096, buffer int4 default 256, clip_geom bool default true)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','ST_AsMVTGeom'
-	LANGUAGE 'c' IMMUTABLE  _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE _PARALLEL
+	_COST_C_HIGH;
 
 -- Availability: 2.4.0
 CREATE OR REPLACE FUNCTION postgis_libprotobuf_version()
@@ -4755,32 +4756,37 @@ CREATE OR REPLACE FUNCTION ST_AsText(geometry)
 CREATE OR REPLACE FUNCTION ST_GeometryFromText(text)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_text'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- Availability: 1.2.2
 CREATE OR REPLACE FUNCTION ST_GeometryFromText(text, int4)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_text'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- Availability: 1.2.2
 CREATE OR REPLACE FUNCTION ST_GeomFromText(text)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_text'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- PostGIS equivalent function: ST_GeometryFromText(text, int4)
 CREATE OR REPLACE FUNCTION ST_GeomFromText(text, int4)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_text'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- PostGIS equivalent function: ST_GeometryFromText(text)
 -- SQL/MM alias for ST_GeomFromText
 CREATE OR REPLACE FUNCTION ST_WKTToSQL(text)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_text'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- Availability: 1.2.2
 CREATE OR REPLACE FUNCTION ST_PointFromText(text)
@@ -4974,13 +4980,14 @@ CREATE OR REPLACE FUNCTION ST_GeomCollFromText(text)
 CREATE OR REPLACE FUNCTION ST_GeomFromWKB(bytea)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','LWGEOM_from_WKB'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_MED;
 
 -- PostGIS equivalent function: GeomFromWKB(bytea, int)
 CREATE OR REPLACE FUNCTION ST_GeomFromWKB(bytea, int)
 	RETURNS geometry
 	AS 'SELECT @extschema@.ST_SetSRID(@extschema@.ST_GeomFromWKB($1), $2)'
-	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'sql' _PARALLEL;
 
 -- PostGIS equivalent function: PointFromWKB(bytea, int)
 CREATE OR REPLACE FUNCTION ST_PointFromWKB(bytea, int)
@@ -5376,8 +5383,7 @@ CREATE OR REPLACE FUNCTION ST_DistanceSphere(geom1 geometry, geom2 geometry)
 	AS $$
 	select @extschema@.ST_distance( @extschema@.geography($1), @extschema@.geography($2),false)
 	$$
-	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL
-	COST 300;
+	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
 
 -- Availability: 1.2.2
 -- Deprecation in 2.2.0
@@ -5386,8 +5392,7 @@ CREATE OR REPLACE FUNCTION ST_distance_sphere(geom1 geometry, geom2 geometry)
   $$ SELECT @extschema@._postgis_deprecate('ST_Distance_Sphere', 'ST_DistanceSphere', '2.2.0');
     SELECT @extschema@.ST_DistanceSphere($1,$2);
   $$
-	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL
-	COST 300;
+	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
 
 ---------------------------------------------------------------
 -- GEOMETRY_COLUMNS view support functions
@@ -5483,7 +5488,7 @@ $$
 		WHERE (upper(old_name) = upper($1) OR upper(new_name) = upper($1))
 			AND coord_dimension = $2;
 $$
-LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL COST 200;
+LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
 
 -- Availability: 2.0.0
 -- Deprecation in 2.2.0
@@ -5675,7 +5680,7 @@ CREATE OR REPLACE FUNCTION ST_CoordDim(Geometry geometry)
 	RETURNS smallint
 	AS 'MODULE_PATHNAME', 'LWGEOM_ndims'
 	LANGUAGE 'c' IMMUTABLE STRICT  _PARALLEL
-	COST 5;
+	_COST_C_LOW;
 --
 -- SQL-MM
 --
@@ -5698,7 +5703,8 @@ CREATE OR REPLACE FUNCTION ST_CoordDim(Geometry geometry)
 CREATE OR REPLACE FUNCTION ST_CurveToLine(geom geometry, tol float8, toltype integer, flags integer)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME', 'ST_CurveToLine'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_HIGH;
 --
 -- SQL-MM
 --
@@ -5726,7 +5732,8 @@ CREATE OR REPLACE FUNCTION ST_CurveToLine(geometry)
 CREATE OR REPLACE FUNCTION ST_HasArc(Geometry geometry)
 	RETURNS boolean
 	AS 'MODULE_PATHNAME', 'LWGEOM_has_arc'
-	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL;
+	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
+	_COST_C_LOW;
 
 CREATE OR REPLACE FUNCTION ST_LineToCurve(Geometry geometry)
 	RETURNS geometry
