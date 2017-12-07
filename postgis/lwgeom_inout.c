@@ -797,36 +797,47 @@ CREATE OR REPLACE FUNCTION CDB_AsSimplifiedTWKB(geom geometry, resolution float8
 PG_FUNCTION_INFO_V1(CDB_AsSimplifiedTWKB);
 Datum CDB_AsSimplifiedTWKB(PG_FUNCTION_ARGS)
 {
-	GSERIALIZED *geom;
+	GSERIALIZED *g;
 	double resolution;
 	LWGEOM *lwgeom;
 	uint8_t *twkb;
-	size_t twkb_size;
+	size_t twkb_size, varsize;
 	uint8_t variant = 0;
  	bytea *result;
 	int twkb_rounding;
 	static double twkb_rounding_adjustment = 0.0;
 
-	if (PG_ARGISNULL(0) || PG_ARGISNULL(1)) PG_RETURN_NULL();
-
 	/* Get a copy because we will be simplifying in-place */
-	geom = PG_GETARG_GSERIALIZED_P_COPY(0);
+	g = PG_GETARG_GSERIALIZED_P(0);
 	resolution = PG_GETARG_FLOAT8(1);
+
+	/* Don't copy a POINT, as it won't get altered in-place */
+	if ( gserialized_get_type(g) == POINTTYPE )
+	{
+		lwgeom = lwgeom_from_gserialized(g);
+	}
+	else
+	{
+		/* Take a copy */
+		GSERIALIZED *g_copy = palloc(VARSIZE(g));
+		memcpy(g_copy, g, VARSIZE(g));
+		lwgeom = lwgeom_from_gserialized(g_copy);
+		lwgeom_remove_repeated_points_in_place(lwgeom, resolution);
+		lwgeom_simplify_in_place(lwgeom, resolution, 1);
+	}
 
 	/* We don't permit ids for single geoemtries */
 	variant = variant & ~TWKB_ID;
 	twkb_rounding = -1 * lround(log10(resolution) + twkb_rounding_adjustment) + 1;
 
 	/* Create TWKB binary string */
-	lwgeom = lwgeom_from_gserialized(geom);
-	lwgeom_remove_repeated_points_in_place(lwgeom, resolution);
-	lwgeom_simplify_in_place(lwgeom, resolution, 1);
 	twkb = lwgeom_to_twkb(lwgeom, variant, twkb_rounding, 1, 1, &twkb_size);
 
 	/* Prepare the PgSQL text return type */
-	result = palloc(twkb_size + VARHDRSZ);
+	varsize = twkb_size + VARHDRSZ;
+	result = palloc(varsize);
 	memcpy(VARDATA(result), twkb, twkb_size);
-	SET_VARSIZE(result, twkb_size + VARHDRSZ);
+	SET_VARSIZE(result, varsize);
 
 	PG_RETURN_BYTEA_P(result);
 }
