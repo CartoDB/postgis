@@ -9,9 +9,6 @@ Changes:
 - Bind in-place functions into "fast" mvt implementation that skips validity testing, and C library hook for potential SQL function. See https://github.com/CartoDB/postgis/commit/b140061bd65ff3ee97d10ca1d24b62ff6c3cf05c
 - Hook up SQL function to "fast" C backend. See https://github.com/CartoDB/postgis/commit/cb6c1ade4ec1703239f1f11b5137b775f3554456
 - Fix early-free problem and clean some error messages out. See https://github.com/CartoDB/postgis/commit/988f02ef08ba96a7ec88ed333574a871f6724756
-- Port in-place support for simplify/repeatedpoint/grid functions back from trunk, for use in MVT generator. See https://github.com/CartoDB/postgis/commit/508fa5f7ea60d32e78f78f5d3d9f8e90534545a5
-- Bind in-place functions into "fast" mvt implementation that skips validity testing, and C library hook for potential SQL function. See https://github.com/CartoDB/postgis/commit/405c9c31ee078fdeb3f1dc9236838c7dda6b1951
-- Hook up SQL function to "fast" C backend. See https://github.com/CartoDB/postgis/commit/8dd8ebe77ef1fc063657cbc0607798534d0a5eba
 - Rename few fast version into place. See https://github.com/CartoDB/postgis/commit/3bcf6d3dfec03d5ecf5ab9e93fce263aa59a581a
 - Port fix from Raul into our branch. See https://github.com/CartoDB/postgis/commit/b036c3d74c5eb034477fdb9b6b074769decf5d52
 - Bump forward versions. See https://github.com/CartoDB/postgis/commit/f4fb0212eb3f0083bc90b0e21e79c95a0635399e
