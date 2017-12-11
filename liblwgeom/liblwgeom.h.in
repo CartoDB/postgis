@@ -1184,6 +1184,7 @@ extern void printLWTIN(LWTIN *tin);
 extern float  next_float_down(double d);
 extern float  next_float_up(double d);
 
+
 /* general utilities 2D */
 extern double  distance2d_pt_pt(const POINT2D *p1, const POINT2D *p2);
 extern double  distance2d_sqr_pt_pt(const POINT2D *p1, const POINT2D *p2);

@@ -56,7 +56,6 @@ next_float_down(double d)
 		return result;
 
 	return nextafterf(result, -1*FLT_MAX);
-
 }
 
 /*
