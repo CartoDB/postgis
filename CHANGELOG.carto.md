@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.4.1.2+carto-1
+
+**Release date**: 2017-11-29
+
+Changes:
+- Fix mistake in handling collapsed interior rings. See [9b64add](https://github.com/CartoDB/postgis/commit/9b64add747f0c89935a791beea75b7190df78467)
+- Remove memory free calls on postgis side since the pg-mem manager will clean up the memory as soon as the function exits anyways. See [faa8865](https://github.com/CartoDB/postgis/commit/faa8865e423ce876a74598c530dfe2bb8ca03266)
+- Add parallel implementation of `ST_AsMVT`. See [d0b5a60](https://github.com/CartoDB/postgis/commit/d0b5a608deae376cea00ebd52fffea5940e03629)
+- Allow invalid MVT output. Revert this if returning to valid MVT outputs. See [ea18668](https://github.com/CartoDB/postgis/commit/ea186680700e9bbaa0b53981f6366959179ca5f1)
+- Add cost defines and strip decorators from 'sql' functions so that inlining works better. See [07991fb](https://github.com/CartoDB/postgis/commit/07991fbabb053e7e965cbce7526a2e9edc5bbe06)
+- Add explicit costs to expensive and other functions. See [fe0d578](https://github.com/CartoDB/postgis/commit/fe0d5780a1b6f3fa728b747e0d431ad7f8e46f8d)
+- Change simplification regime to be kinder to inputs. See [73ec5f8](https://github.com/CartoDB/postgis/commit/73ec5f89fa3a3c07c9d57b4f7112f2dd9131a67d)
+- Bump microversion. See [16ad637](https://github.com/CartoDB/postgis/commit/16ad63789f299050ffabd820b244b3ba2046a22c)
+
+
 ## 2.4.1.1+carto-1
 
 **Release date**: 2017-10-30
