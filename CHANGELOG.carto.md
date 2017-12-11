@@ -2,7 +2,7 @@
 
 ## 2.4.1.4+carto-1
 
-**Release date**: 2017-12-TBD
+**Release date**: 2017-12-11
 
 Changes:
 - Minor tweaks in twkb and bytebuffer code lines to try and drop a few instructions while running mass point queries. See [#7](https://github.com/CartoDB/postgis/pull/7)
