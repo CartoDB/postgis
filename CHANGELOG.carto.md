@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.1.3+carto-1
+
+**Release date**: 2017-11-29
+
+Changes:
+- Bump microversion again (needed for a new package). See [607ebd0](https://github.com/CartoDB/postgis/commit/3a51a613be7a79757e181ed7c446973eac081ad5)
+
+
 ## 2.4.1.2+carto-1
 
 **Release date**: 2017-11-29
