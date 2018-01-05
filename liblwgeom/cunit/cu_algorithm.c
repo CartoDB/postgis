@@ -925,6 +925,41 @@ static void test_geohash_point_as_int(void)
 	CU_ASSERT_EQUAL(gh, rs);
 }
 
+
+static void test_lwgeom_remove_repeated_points(void)
+{
+	LWGEOM *g;
+	char *ewkt;
+
+	g = lwgeom_from_wkt("MULTIPOINT(0 0, 10 0, 10 10, 10 10, 0 10, 0 10, 0 10, 0 0, 0 0, 0 0, 5 5, 0 0, 5 5)", LW_PARSER_CHECK_NONE);
+	lwgeom_remove_repeated_points_in_place(g, 1);
+	ewkt = lwgeom_to_ewkt(g);
+	CU_ASSERT_STRING_EQUAL(ewkt, "MULTIPOINT(0 0,10 0,10 10,0 10,5 5)");
+	lwgeom_free(g);
+	lwfree(ewkt);
+
+	g = lwgeom_from_wkt("LINESTRING(1612830.15445 4841287.12672,1612830.15824 4841287.12674,1612829.98813 4841274.56198)", LW_PARSER_CHECK_NONE);
+	lwgeom_remove_repeated_points_in_place(g, 0.01);
+	ewkt = lwgeom_to_ewkt(g);
+	CU_ASSERT_STRING_EQUAL(ewkt, "LINESTRING(1612830.15445 4841287.12672,1612829.98813 4841274.56198)");
+	lwgeom_free(g);
+	lwfree(ewkt);
+
+	g = lwgeom_from_wkt("MULTIPOINT(0 0,10 0,10 10,10 10,0 10,0 10,0 10,0 0,0 0,0 0,5 5,5 5,5 8,8 8,8 8,8 8,8 5,8 5,5 5,5 5,5 5,5 5,5 5,50 50,50 50,50 50,50 60,50 60,50 60,60 60,60 50,60 50,50 50,55 55,55 58,58 58,58 55,58 55,55 55)", LW_PARSER_CHECK_NONE);
+	lwgeom_remove_repeated_points_in_place(g, 1);
+	ewkt = lwgeom_to_ewkt(g);
+	CU_ASSERT_STRING_EQUAL(ewkt, "MULTIPOINT(0 0,10 0,10 10,0 10,5 5,5 8,8 8,8 5,50 50,50 60,60 60,60 50,55 55,55 58,58 58,58 55)");
+	lwgeom_free(g);
+	lwfree(ewkt);
+
+	g = lwgeom_from_wkt("POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))", LW_PARSER_CHECK_NONE);
+	lwgeom_remove_repeated_points_in_place(g, 10000);
+	ewkt = lwgeom_to_ewkt(g);
+	CU_ASSERT_STRING_EQUAL(ewkt, "POLYGON((0 0,1 1,1 0,0 0))");
+	lwgeom_free(g);
+	lwfree(ewkt);
+}
+
 static void test_lwgeom_simplify(void)
 {
 		LWGEOM *l;
@@ -1213,4 +1248,5 @@ void algorithms_suite_setup(void)
 	PG_ADD_TEST(suite,test_median_handles_3d_correctly);
 	PG_ADD_TEST(suite,test_median_robustness);
 	PG_ADD_TEST(suite,test_lwpoly_construct_circle);
+	PG_ADD_TEST(suite,test_lwgeom_remove_repeated_points);
 }
