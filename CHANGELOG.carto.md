@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.1.5+carto-1
+
+**Release date**: 2018-01-08
+
+Changes:
+- Fix for ST_RemoveRepeatedPoints and support for json-c >= 0.13 [#9](https://github.com/CartoDB/postgis/pull/9)
+
+
 ## 2.4.1.4+carto-1
 
 **Release date**: 2017-12-11
