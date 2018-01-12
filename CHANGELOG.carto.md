@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.1.6+carto-1
+
+**Release date**: 2018-01-12
+
+Changes:
+- When looking up SRID numbers, assume that spatial_ref_sys will share a schema will the calling function (st_transform, usually) and look for spatial_ref_sys there.
+
 ## 2.4.1.5+carto-1
 
 **Release date**: 2018-01-08
