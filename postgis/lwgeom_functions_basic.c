@@ -2648,7 +2648,7 @@ Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS)
 	memcpy(g_copy, g_in, VARSIZE(g_in));
 
 	/* Work */
-	lwgeom_in = lwgeom_from_gserialized(g_in);
+	lwgeom_in = lwgeom_from_gserialized(g_copy);
 	lwgeom_remove_repeated_points_in_place(lwgeom_in, tolerance);
 	g_out = geometry_serialize(lwgeom_in);
 
