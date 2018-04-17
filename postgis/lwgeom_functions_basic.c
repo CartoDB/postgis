@@ -2630,7 +2630,7 @@ Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS);
 PG_FUNCTION_INFO_V1(ST_RemoveRepeatedPoints);
 Datum ST_RemoveRepeatedPoints(PG_FUNCTION_ARGS)
 {
-	GSERIALIZED *g_in = PG_GETARG_GSERIALIZED_P(0);
+	GSERIALIZED *g_in = PG_GETARG_GSERIALIZED_P_COPY(0);
 	int type = gserialized_get_type(g_in);
 	GSERIALIZED *g_out, *g_copy;
 	LWGEOM *lwgeom_in = NULL;
