@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.1.7+carto-1
+
+**Release date**: 2018-04-23
+
+Changes
+- Fix for ST_RemoveRepeatedPoints bug: always take a copy of the input geometries.
+
 ## 2.4.1.6+carto-1
 
 **Release date**: 2018-01-12
