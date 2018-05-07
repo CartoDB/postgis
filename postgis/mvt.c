@@ -872,28 +872,28 @@ LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buf
 		return NULL;
 
 	/* if polygon(s) make valid and force clockwise as per MVT spec */
-	if (lwgeom_out->type == POLYGONTYPE ||
-	    lwgeom_out->type == MULTIPOLYGONTYPE) {
-	    lwgeom_out = lwgeom_make_valid(lwgeom_out);
+	if (lwgeom->type == POLYGONTYPE ||
+	    lwgeom->type == MULTIPOLYGONTYPE) {
+	    lwgeom = lwgeom_make_valid(lwgeom);
 		/* Because we are in image coordinates, we need to go to CCW in */
 		/* order to get a CW output in image space */
-		lwgeom_force_clockwise(lwgeom_out);
-		lwgeom_reverse(lwgeom_out);
+		lwgeom_force_clockwise(lwgeom);
+		lwgeom_reverse(lwgeom);
 	}
 
 	/* if geometry collection extract highest dimensional geometry type */
-	if (lwgeom_out->type == COLLECTIONTYPE) {
-		LWCOLLECTION *lwcoll = lwgeom_as_lwcollection(lwgeom_out);
-		lwgeom_out = lwcollection_as_lwgeom(lwcollection_extract(lwcoll, max_type(lwcoll)));
-		lwgeom_out = lwgeom_homogenize(lwgeom_out);
+	if (lwgeom->type == COLLECTIONTYPE) {
+		LWCOLLECTION *lwcoll = lwgeom_as_lwcollection(lwgeom);
+		lwgeom = lwcollection_as_lwgeom(lwcollection_extract(lwcoll, max_type(lwcoll)));
+		lwgeom = lwgeom_homogenize(lwgeom);
 		/* if polygon(s) make valid and force clockwise as per MVT spec */
-		if (lwgeom_out->type == POLYGONTYPE ||
-		    lwgeom_out->type == MULTIPOLYGONTYPE) {
-		    lwgeom_out = lwgeom_make_valid(lwgeom_out);
+		if (lwgeom->type == POLYGONTYPE ||
+		    lwgeom->type == MULTIPOLYGONTYPE) {
+		    lwgeom = lwgeom_make_valid(lwgeom);
 			/* Because we are in image coordinates, we need to go to CCW in */
 			/* order to get a CW output in image space */
-			lwgeom_force_clockwise(lwgeom_out);
-			lwgeom_reverse(lwgeom_out);
+			lwgeom_force_clockwise(lwgeom);
+			lwgeom_reverse(lwgeom);
 		}
 	}
 
