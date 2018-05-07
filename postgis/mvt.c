@@ -755,6 +755,12 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	if (!lwgeom_out)
 		lwgeom_out = lwgeom;
 
+	/* if polygon(s) force clockwise as per MVT spec */
+	if (lwgeom_out->type == POLYGONTYPE ||
+		lwgeom_out->type == MULTIPOLYGONTYPE) {
+        lwgeom_force_clockwise(lwgeom_out);
+	}
+
 	/* transform to tile coordinate space */
 	memset(&affine, 0, sizeof(affine));
 	affine.afac = fx;
@@ -775,12 +781,12 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	if (lwgeom_out == NULL || lwgeom_is_empty(lwgeom_out))
 		return NULL;
 
-	/* if polygon(s) force clockwise as per MVT spec */
-	if (lwgeom_out->type == POLYGONTYPE ||
-		lwgeom_out->type == MULTIPOLYGONTYPE) {
-		// lwgeom_out = lwgeom_make_valid(lwgeom_out);
-		lwgeom_force_clockwise(lwgeom_out);
-	}
+	/* if polygon(s) force valid as per MVT spec */
+    // if (lwgeom_out->type == POLYGONTYPE ||
+    //     lwgeom_out->type == MULTIPOLYGONTYPE) {
+    //     /* Watch out, does make_valid try to force orientation? */
+    //     lwgeom_out = lwgeom_make_valid(lwgeom_out);
+    // }
 
 	return lwgeom_out;
 }
