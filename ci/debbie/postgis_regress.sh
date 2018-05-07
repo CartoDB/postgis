@@ -9,11 +9,13 @@ set -e
 # export POSTGIS_MINOR_VERSION=2
 # export POSTGIS_MICRO_VERSION=0dev
 # export JENKINS_HOME=/var/lib/jenkins/workspace
-# export GEOS_VER=3.6.0dev
-# export GDAL_VER=2.0
-# export MAKE_GARDEN=1
-# export MAKE_EXTENSION=0
-# export DUMP_RESTORE=1
+# sadly can't override GEOS and GDAL because the pg startup script uses this to set path of GEOS and GDAL to right one
+#export GEOS_VER=3.7.0dev
+#export GDAL_VER=2.2
+export MAKE_GARDEN=0
+export MAKE_EXTENSION=1
+export DUMP_RESTORE=1
+export SFCGAL_VER=1.3
 
 ## end variables passed in by jenkins
 
@@ -33,7 +35,7 @@ echo $PGPORT
 echo ${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}
 
 ## doesn't work for some reason - just hard-code to branches for now
-# if [[ $POSTGIS_MICRO_VERSION  == *SVN* || $POSTGIS_MICRO_VERSION  == *dev*  ]]  
+# if [[ $POSTGIS_MICRO_VERSION  == *SVN* || $POSTGIS_MICRO_VERSION  == *dev*  ]]
 # then
 # 	export POSTGIS_SRC=${PROJECTS}/postgis/branches/${POSTGIS_MAJOR_VERSION}.${POSTGIS_MINOR_VERSION}
 # else
@@ -54,22 +56,23 @@ fi
 ./configure \
     --with-pgconfig=${PROJECTS}/pg/rel/pg${PG_VER}w${OS_BUILD}/bin/pg_config \
     --with-geosconfig=${PROJECTS}/geos/rel-${GEOS_VER}w${OS_BUILD}/bin/geos-config \
-    --with-gdalconfig=${PROJECTS}/gdal/rel-${GDAL_VER}w${OS_BUILD}/bin/gdal-config --with-sfcgal=/usr/bin/sfcgal-config \
+    --with-gdalconfig=${PROJECTS}/gdal/rel-${GDAL_VER}w${OS_BUILD}/bin/gdal-config \
     --without-interrupt-tests \
     --prefix=${PROJECTS}/pg/rel/pg${PG_VER}w${OS_BUILD}
+
 make clean
 ## install so we can later test extension upgrade
-make 
+make
 
 if [ "$?" != "0" ]; then
   exit $?
 fi
 
 make check RUNTESTFLAGS=-v
+make install
 
 if [ "$MAKE_EXTENSION" = "1" ]; then
  echo "Running extension testing"
- make install
  make check RUNTESTFLAGS=--extension
  if [ "$?" != "0" ]; then
   exit $?
@@ -78,7 +81,6 @@ fi
 
 if [ "$DUMP_RESTORE" = "1" ]; then
  echo "Dum restore test"
- make install
  make check RUNTESTFLAGS="-v --dumprestore"
  if [ "$?" != "0" ]; then
   exit $?
@@ -88,4 +90,15 @@ fi
 if [ "$MAKE_GARDEN" = "1" ]; then
  echo "Running garden test"
  make garden
+ if [ "$?" != "0" ]; then
+  exit $?
+ fi
+fi
+
+# Test all available upgrades
+# TODO: protect via some variable ?
+utils/check_all_upgrades.sh \
+  `grep '^POSTGIS_' Version.config | cut -d= -f2 | paste -sd '.'`
+if [ "$?" != "0" ]; then
+  exit $?
 fi
