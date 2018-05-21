@@ -94,50 +94,17 @@ static void AddPrepGeomHashEntry(PrepGeomHashEntry pghe);
 static PrepGeomHashEntry *GetPrepGeomHashEntry(MemoryContext mcxt);
 static void DeletePrepGeomHashEntry(MemoryContext mcxt);
 
-/* Memory context cache function prototypes */
-static void PreparedCacheInit(MemoryContext context);
-static void PreparedCacheReset(MemoryContext context);
-static void PreparedCacheDelete(MemoryContext context);
-static bool PreparedCacheIsEmpty(MemoryContext context);
-#if POSTGIS_PGSQL_VERSION >= 96
-static void PreparedCacheStats(MemoryContext context, int level, bool print, MemoryContextCounters *totals);
-#else
-static void PreparedCacheStats(MemoryContext context, int level);
-#endif
-
-#ifdef MEMORY_CONTEXT_CHECKING
-static void PreparedCacheCheck(MemoryContext context);
-#endif
-
-/* Memory context definition must match the current version of PostgreSQL */
-static MemoryContextMethods PreparedCacheContextMethods =
-{
-	NULL,
-	NULL,
-	NULL,
-	PreparedCacheInit,
-	PreparedCacheReset,
-	PreparedCacheDelete,
-	NULL,
-	PreparedCacheIsEmpty,
-	PreparedCacheStats
-#ifdef MEMORY_CONTEXT_CHECKING
-	, PreparedCacheCheck
-#endif
-};
 
 static void
-PreparedCacheInit(MemoryContext context)
-{
-	/*
-	 * Do nothing as the cache is initialised when the transform()
-	 * function is first called
-	 */
-}
-
-static void
+#if POSTGIS_PGSQL_VERSION < 96
 PreparedCacheDelete(MemoryContext context)
 {
+#else
+PreparedCacheDelete(void *ptr)
+{
+	MemoryContext context = (MemoryContext)ptr;
+#endif
+
 	PrepGeomHashEntry* pghe;
 
 	/* Lookup the hash entry pointer in the global hash table so we can free it */
@@ -158,6 +125,16 @@ PreparedCacheDelete(MemoryContext context)
 	DeletePrepGeomHashEntry(context);
 }
 
+#if POSTGIS_PGSQL_VERSION < 96
+static void
+PreparedCacheInit(MemoryContext context)
+{
+	/*
+	 * Do nothing as the cache is initialised when the transform()
+	 * function is first called
+	 */
+}
+
 static void
 PreparedCacheReset(MemoryContext context)
 {
@@ -174,7 +151,7 @@ PreparedCacheIsEmpty(MemoryContext context)
 	 * Always return false since this call is mandatory according to tgl
 	 * (see postgis-devel archives July 2007)
 	 */
-	return FALSE;
+	return false;
 }
 
 static void
@@ -189,7 +166,6 @@ PreparedCacheStats(MemoryContext context, int level)
 	 * (see postgis-devel archives July 2007)
 	   fprintf(stderr, "%s: Prepared context\n", context->name);
 	 */
-
 }
 
 #ifdef MEMORY_CONTEXT_CHECKING
@@ -201,7 +177,28 @@ PreparedCacheCheck(MemoryContext context)
 	 * with MEMORY_CONTEXT_CHECKING defined
 	 */
 }
+#endif /* MEMORY_CONTEXT_CHECKING */
+
+
+/* Memory context definition must match the current version of PostgreSQL */
+static MemoryContextMethods PreparedCacheContextMethods =
+{
+	NULL,
+	NULL,
+	NULL,
+	PreparedCacheInit,
+	PreparedCacheReset,
+	PreparedCacheDelete,
+	NULL,
+	PreparedCacheIsEmpty,
+	PreparedCacheStats
+#ifdef MEMORY_CONTEXT_CHECKING
+	, PreparedCacheCheck
 #endif
+};
+
+#endif /* POSTGIS_PGSQL_VERSION < 96 */
+
 
 /* TODO: put this in common are for both transform and prepared
 ** mcxt_ptr_hash
@@ -320,10 +317,27 @@ PrepGeomCacheBuilder(const LWGEOM *lwgeom, GeomCache *cache)
 	if ( ! prepcache->context_callback )
 	{
 		PrepGeomHashEntry pghe;
+#if POSTGIS_PGSQL_VERSION < 96
 		prepcache->context_callback = MemoryContextCreate(T_AllocSetContext, 8192,
 		                             &PreparedCacheContextMethods,
 		                             prepcache->context_statement,
 		                             "PostGIS Prepared Geometry Context");
+
+#else
+		prepcache->context_callback = AllocSetContextCreate(prepcache->context_statement,
+	                                   "PostGIS Prepared Geometry Context",
+	                                   ALLOCSET_SMALL_SIZES);
+
+		/* PgSQL comments suggest allocating callback in the context */
+		/* being managed, so that the callback object gets cleaned along with */
+		/* the context */
+		MemoryContextCallback *callback = MemoryContextAlloc(prepcache->context_callback, sizeof(MemoryContextCallback));
+		callback->arg = (void*)(prepcache->context_callback);
+		callback->func = PreparedCacheDelete;
+		MemoryContextRegisterResetCallback(prepcache->context_callback, callback);
+#endif
+
+
 		pghe.context = prepcache->context_callback;
 		pghe.geom = 0;
 		pghe.prepared_geom = 0;

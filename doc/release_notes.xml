@@ -4,6 +4,72 @@
     <subtitle>Release Notes</subtitle>
 
     <sect1>
+      <title>Release 2.4.4</title>
+      <para>Release date: 2018/04/08</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect><title>Bug Fixes</title>
+        <para>#3055, [raster] ST_Clip() on a raster without band crashes the server
+                  (Regina Obe)</para>
+        <para>#3942, geojson: Do not include private header for json-c >= 0.13
+                  (Björn Esser)</para>
+        <para>#3952, ST_Transform fails in parallel mode (Paul Ramsey)</para>
+        <para>#3978, Fix KNN when upgrading from 2.1 or older (Sandro Santilli)</para>
+        <para>#4003, lwpoly_construct_circle: Avoid division by zero (Raúl Marín Rodríguez)</para>
+        <para>#4004, Avoid memory exhaustion when building a btree index (Edmund Horner)</para>
+        <para>#4016, proj 5.0.0 support (Raúl Marín Rodríguez)</para>
+        <para>#4017, lwgeom lexer memory corruption (Peter E)</para>
+        <para>#4020, Casting from box3d to geometry now returns correctly connected
+                  PolyhedralSurface (Matthias Bay)</para>
+        <para>#4025, #4032 Incorrect answers for temporally "almost overlapping" ranges
+                  (Paul Ramsey, Darafei Praliaskouski)</para>
+        <para>#4052, schema qualify several functions in geography (Regina Obe)</para>
+        <para>#4055, ST_ClusterIntersecting drops SRID (Daniel Baston)</para>
+      </simplesect>
+
+      <simplesect><title>Enhancements</title>
+        <para>#3946, Compile support for PgSQL 11 (Paul Ramsey)</para>
+        <para>#3992, Use PKG_PROG_PKG_CONFIG macro from pkg.m4 to detect pkg-config
+                  (Bas Couwenberg)</para>
+        <para>#4044, Upgrade support for PgSQL 11 (Regina Obe)</para>
+      </simplesect>
+    </sect1>
+
+
+    <sect1>
+      <title>Release 2.4.3</title>
+      <para>Release date: 2018/01/17</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect>
+        <title>Bug Fixes and Enhancements</title>
+        <para>#3713, Support encodings that happen to output a '\' character</para>
+        <para>#3827, Set configure default to not do interrupt testing,
+                  was causing false negatives for many people. (Regina Obe)
+                 revised to be standards compliant in #3988 (Greg Troxel)</para>
+        <para>#3930, Minimum bounding circle issues on 32-bit platforms</para>
+        <para>#3965, ST_ClusterKMeans used to lose some clusters on initialization
+                  (Darafei Praliaskouski)</para>
+        <para>#3956, Brin opclass object does not upgrade properly (Sandro Santilli)</para>
+        <para>#3982, ST_AsEncodedPolyline supports LINESTRING EMPTY and MULTIPOINT EMPTY
+                  (Darafei Praliaskouski)</para>
+        <para>#3975, ST_Transform runs query on spatial_ref_sys without schema
+                  qualification. Was causing restore issues. (Paul Ramsey)</para>
+      </simplesect>
+    </sect1>
+
+
+    <sect1>
+      <title>Release 2.4.2</title>
+      <para>Release date: 2017/11/15</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect>
+        <title>Bug Fixes and Enhancements</title>
+        <para>#3917, Fix zcta5 load</para>
+        <para>#3667, Fix for bug in geography ST_Segmentize</para>
+        <para>#3926, Add missing 2.2.6 and 2.3.4 upgrade paths (Muhammad Usama)</para>
+      </simplesect>
+    </sect1>
+
+    <sect1>
       <title>Release 2.4.1</title>
       <para>Release date: 2017/10/18</para>
       <para>This is a bug fix and performance improvement release.</para>
@@ -77,6 +143,52 @@
         </simplesect>
     </sect1>
 
+    <sect1>
+      <title>Release 2.3.5</title>
+      <para>Release date: 2017/11/15</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect>
+        <title>Bug Fixes and Enhancements</title>
+        <para>#3667, Fix for bug in geography ST_Segmentize</para>
+        <para>#3926, Add missing 2.2.6 upgrade path</para>
+      </simplesect>
+    </sect1>
+
+    <sect1>
+      <title>Release 2.3.4</title>
+      <para>Release date: 2017/10/18</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect>
+        <title>Bug Fixes and Enhancements</title>
+        <para>PostgreSQL 10 support</para>
+        <para>#3782, Memory leak in lwline_from_wkb_state (Even Rouault)</para>
+        <para>#3101, Fix buffer overflow in pgsql2shp (Sandro Santilli)</para>
+        <para>#3786, ptarray null and heap issues on is_closed</para>
+        <para>#3795, Solaris build issues due to missing isfinite define (Julian Schauder)</para>
+        <para>#3792, mark all 3D related including SFCGAL as parallel safe</para>
+        <para>#3800, shp2pgql-gui allow export of foreign tables, materialized views, and partitioned tables</para>
+        <para>#3806, Reverse geocoder missing suffix direction when present</para>
+        <para>#3698, loading census tabblock is broken</para>
+        <para>#3839, loader tests sometimes crash because of variables not initialized also reenable cunit loader tess to always run.</para>
+        <para>#3774, Trigonometric length for CompoundCurves</para>
+        <para>#3731, Crash on very small table of homogenous data</para>
+        <para>#2836, Receiving ERROR: ExteriorRing: geom is not a polygon with ST_ConcaveHull</para>
+        <para>#3781, Not-quite curved CurvePolygon rejected by ST_Contains</para>
+        <para>#3818, Triangles unclosed in M should be parseable</para>
+        <para>#3866, Rare crash generating TWKB with large coordinate values</para>
+        <para>#3869, Fix build with "gold" linker</para>
+        <para>#3845, Gracefully handle short-measure issue</para>
+        <para>#3879, Division by zero in some arc cases</para>
+        <para>#3878, Single defn of signum in header</para>
+        <para>#3880, Undefined behaviour in TYPMOD_GET_SRID</para>
+        <para>#3875, Fix undefined behaviour in shift operation</para>
+        <para>#3874, lw_dist2d_pt_arc division by zero</para>
+        <para>#3882, undefined behaviour in zigzag with negative inputs</para>
+        <para>#3891, undefined behaviour in pointarray_to_encoded_polyline</para>
+        <para>#3895, throw error on malformed WKB input</para>
+        <para>#3907, Allocate enough space for all possible GBOX string outputs (Raúl Marín Rodríguez)</para>
+      </simplesect>
+    </sect1>
     <sect1>
       <title>Release 2.3.3</title>
       <para>Release date: 2017/07/01</para>

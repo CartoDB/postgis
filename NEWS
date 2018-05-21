@@ -1,8 +1,74 @@
-PostGIS 2.4.2dev
-2017/xx/xx
+PostGIS 2.4.5
+2018/xx/xx
+
+  * Bug Fixes and Enchantments
+
+  - #4031, Survive to big MaxError tolerances passed to ST_CurveToLine
+           (Sandro Santilli)
+  - #4071, ST_ClusterKMeans crash on NULL/EMPTY fixed (Darafei Praliaskouski)
+  - #4079, ensure St_AsMVTGeom outputs CW oriented polygons (Paul Ramsey)
+  - #4070, use standard interruption error code on GEOS interruptions
+           (Paul Ramsey)
+  - #3980, delay freeing input until processing complete (lucasvr)
+  - #4090, PG 11 support (Paul Ramsey, Raúl Marín)
+  - #3997, fix bug in lwgeom_median and avoid division by zero (Raúl Marín)
+
+
+PostGIS 2.4.4
+2018/04/08
 
  * Bug fixes *
- - #3917, Fix zcta5 load
+  - #3055, [raster] ST_Clip() on a raster without band crashes the server
+          (Regina Obe)
+  - #3942, geojson: Do not include private header for json-c >= 0.13
+           (Björn Esser)
+  - #3952, ST_Transform fails in parallel mode (Paul Ramsey)
+  - #3978, Fix KNN when upgrading from 2.1 or older (Sandro Santilli)
+  - #4003, lwpoly_construct_circle: Avoid division by zero (Raúl Marín Rodríguez)
+  - #4004, Avoid memory exhaustion when building a btree index (Edmund Horner)
+  - #4016, proj 5.0.0 support (Raúl Marín Rodríguez)
+  - #4017, lwgeom lexer memory corruption (Peter E)
+  - #4020, Casting from box3d to geometry now returns correctly connected
+           PolyhedralSurface (Matthias Bay)
+  - #4025, #4032 Incorrect answers for temporally "almost overlapping" ranges
+           (Paul Ramsey, Darafei Praliaskouski)
+  - #4052, schema qualify several functions in geography (Regina Obe)
+  - #4055, ST_ClusterIntersecting drops SRID (Daniel Baston)
+  - #4067, Guard lookup of namespace in internal call case
+
+ * Enhancements *
+  - #3946, Compile support for PgSQL 11 (Paul Ramsey)
+  - #3992, Use PKG_PROG_PKG_CONFIG macro from pkg.m4 to detect pkg-config
+           (Bas Couwenberg)
+  - #4044, Upgrade support for PgSQL 11 (Regina Obe)
+
+PostGIS 2.4.3
+2018/01/17
+
+ * Bug fixes *
+  - #3713, Support encodings that happen to output a '\' character
+  - #3827, Set configure default to not do interrupt testing,
+           was causing false negatives for many people (Regina Obe)
+           revised to be standards compliant in #3988 (Greg Troxel)
+  - #3930, Minimum bounding circle issues on 32-bit platforms
+  - #3965, ST_ClusterKMeans used to lose some clusters on initialization
+           (Darafei Praliaskouski)
+  - #3956, Brin opclass object does not upgrade properly (Sandro Santilli)
+  - #3982, ST_AsEncodedPolyline supports LINESTRING EMPTY and MULTIPOINT EMPTY
+           (Darafei Praliaskouski)
+  - #3975, ST_Transform runs query on spatial_ref_sys without schema
+           qualification. Was causing restore issues. (Paul Ramsey)
+
+ * Enhancements *
+  - #3944, Update to EPSG register v9.2 (Even Rouault)
+
+PostGIS 2.4.2
+2017/11/15
+
+ * Bug fixes *
+  - #3917, Fix zcta5 load
+  - #3667, Fix for bug in geography ST_Segmentize
+  - #3926, Add missing 2.2.6 and 2.3.4 upgrade paths (Muhammad Usama)
 
 
 PostGIS 2.4.1

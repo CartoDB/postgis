@@ -107,7 +107,7 @@ CREATE OR REPLACE FUNCTION ST_AsText(geography)
 -- Availability: 1.5.0 - this is just a hack to prevent unknown from causing ambiguous name because of geography
 CREATE OR REPLACE FUNCTION ST_AsText(text)
 	RETURNS text AS
-	$$ SELECT ST_AsText($1::@extschema@.geometry);  $$
+	$$ SELECT @extschema@.ST_AsText($1::@extschema@.geometry);  $$
 	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
 
 -- Availability: 1.5.0
@@ -279,6 +279,7 @@ CREATE OPERATOR CLASS gist_geography_ops
 --	OPERATOR        8        @	,
 -- Availability: 2.2.0
 	OPERATOR        13       <-> FOR ORDER BY pg_catalog.float_ops,
+-- Availability: 2.2.0
 	FUNCTION        8        geography_gist_distance (internal, geography, int4),
 	FUNCTION        1        geography_gist_consistent (internal, geography, int4),
 	FUNCTION        2        geography_gist_union (bytea, internal),
@@ -401,7 +402,7 @@ CREATE OR REPLACE FUNCTION ST_AsSVG(geog geography,rel int4 DEFAULT 0,maxdecimal
 -- Availability: 1.5.0 - this is just a hack to prevent unknown from causing ambiguous name because of geography
 CREATE OR REPLACE FUNCTION ST_AsSVG(text)
 	RETURNS text AS
-	$$ SELECT ST_AsSVG($1::@extschema@.geometry,0,15);  $$
+	$$ SELECT @extschema@.ST_AsSVG($1::@extschema@.geometry,0,15);  $$
 	LANGUAGE 'sql' IMMUTABLE STRICT _PARALLEL;
 
 --
@@ -564,7 +565,7 @@ CREATE OR REPLACE FUNCTION ST_DWithin(geography, geography, float8)
 -- Availability: 1.5.0 - this is just a hack to prevent unknown from causing ambiguous name because of geography
 CREATE OR REPLACE FUNCTION ST_DWithin(text, text, float8)
 	RETURNS boolean AS
-	$$ SELECT ST_DWithin($1::@extschema@.geometry, $2::@extschema@.geometry, $3);  $$
+	$$ SELECT @extschema@.ST_DWithin($1::@extschema@.geometry, $2::@extschema@.geometry, $3);  $$
 	LANGUAGE 'sql' IMMUTABLE _PARALLEL;
 
 
@@ -740,43 +741,43 @@ CREATE OR REPLACE FUNCTION _ST_BestSRID(geography)
 -- Availability: 1.5.0
 CREATE OR REPLACE FUNCTION ST_Buffer(geography, float8)
 	RETURNS geography
-	AS 'SELECT geography(ST_Transform(ST_Buffer(ST_Transform(geometry($1), @extschema@._ST_BestSRID($1)), $2), 4326))'
+	AS 'SELECT @extschema@.geography(@extschema@.ST_Transform(@extschema@.ST_Buffer(@extschema@.ST_Transform(@extschema@.geometry($1), @extschema@._ST_BestSRID($1)), $2), 4326))'
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 2.3.x
 CREATE OR REPLACE FUNCTION ST_Buffer(geography, float8, integer)
 	RETURNS geography
-	AS 'SELECT geography(ST_Transform(ST_Buffer(ST_Transform(geometry($1), @extschema@._ST_BestSRID($1)), $2, $3), 4326))'
+	AS 'SELECT @extschema@.geography(@extschema@.ST_Transform(@extschema@.ST_Buffer(@extschema@.ST_Transform(@extschema@.geometry($1), @extschema@._ST_BestSRID($1)), $2, $3), 4326))'
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 2.3.x
 CREATE OR REPLACE FUNCTION ST_Buffer(geography, float8, text)
 	RETURNS geography
-	AS 'SELECT geography(ST_Transform(ST_Buffer(ST_Transform(geometry($1), @extschema@._ST_BestSRID($1)), $2, $3), 4326))'
+	AS 'SELECT @extschema@.geography(@extschema@.ST_Transform(@extschema@.ST_Buffer(@extschema@.ST_Transform(@extschema@.geometry($1), @extschema@._ST_BestSRID($1)), $2, $3), 4326))'
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 1.5.0 - this is just a hack to prevent unknown from causing ambiguous name because of geography
 CREATE OR REPLACE FUNCTION ST_Buffer(text, float8)
 	RETURNS geometry AS
-	$$ SELECT ST_Buffer($1::@extschema@.geometry, $2);  $$
+	$$ SELECT @extschema@.ST_Buffer($1::@extschema@.geometry, $2);  $$
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 2.3.x
 CREATE OR REPLACE FUNCTION ST_Buffer(text, float8, integer)
 	RETURNS geometry AS
-	$$ SELECT ST_Buffer($1::@extschema@.geometry, $2, $3);  $$
+	$$ SELECT @extschema@.ST_Buffer($1::@extschema@.geometry, $2, $3);  $$
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 2.3.x
 CREATE OR REPLACE FUNCTION ST_Buffer(text, float8, text)
 	RETURNS geometry AS
-	$$ SELECT ST_Buffer($1::@extschema@.geometry, $2, $3);  $$
+	$$ SELECT @extschema@.ST_Buffer($1::@extschema@.geometry, $2, $3);  $$
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 1.5.0
 CREATE OR REPLACE FUNCTION ST_Intersection(geography, geography)
 	RETURNS geography
-	AS 'SELECT geography(ST_Transform(ST_Intersection(ST_Transform(geometry($1), @extschema@._ST_BestSRID($1, $2)), ST_Transform(geometry($2), @extschema@._ST_BestSRID($1, $2))), 4326))'
+	AS 'SELECT @extschema@.geography(@extschema@.ST_Transform(@extschema@.ST_Intersection(@extschema@.ST_Transform(@extschema@.geometry($1), @extschema@._ST_BestSRID($1, $2)), @extschema@.ST_Transform(@extschema@.geometry($2), @extschema@._ST_BestSRID($1, $2))), 4326))'
 	LANGUAGE 'sql' _PARALLEL;
 
 -- Availability: 1.5.0 - this is just a hack to prevent unknown from causing ambiguous name because of geography

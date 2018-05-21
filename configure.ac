@@ -15,6 +15,7 @@ AC_CONFIG_MACRO_DIR([macros])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_PROG_INSTALL
 
+
 dnl Invoke libtool: we do this as it is the easiest way to find the PIC
 dnl flags required to build liblwgeom
 AC_PROG_LIBTOOL
@@ -906,13 +907,12 @@ AC_SUBST([HAVE_JSON])
 
 fi
 
-
 dnl ===========================================================================
 dnl Detect if pkg-config installed
 dnl ===========================================================================
 # check for pkg-config
-AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-if test "$PKG_CONFIG" = "no"; then
+PKG_PROG_PKG_CONFIG
+if test -z "$PKG_CONFIG"; then
    AC_MSG_WARN([Cannot find pkg-config, make sure it is installed in your PATH])
 fi
 
@@ -969,7 +969,7 @@ if test "$CHECK_PROTOBUF" != "no"; then
 
     dnl No user-specified protobuf dir, try to find one using pkg-config
     else
-        if test "$PKG_CONFIG" = "no"; then
+        if test -z "$PKG_CONFIG"; then
         	AC_MSG_WARN([Cannot find pkg-config, disabling protobuf support.])
         	HAVE_PROTOBUF=no
         else
@@ -1185,8 +1185,13 @@ AC_ARG_WITH([interrupt-tests],
                     [Disable the interrupt tests (for CI servers)])],
     [], [])
 
-if test "x$with_interrupt_tests" != "xno"; then
-    INTERRUPTTESTS="yes"
+AC_ARG_WITH([interrupt-tests],
+    [AS_HELP_STRING([--with-interrupt-tests],
+                    [Enable interrupt tests])],
+    [INTERRUPTTESTS="yes"], [])
+
+if test "x$with_interrupt_tests" = "xno"; then
+    INTERRUPTTESTS="no"
 fi
 
 AC_SUBST([INTERRUPTTESTS])
@@ -1471,6 +1476,13 @@ AC_MSG_RESULT()
 AC_MSG_RESULT([ -------------- Compiler Info ------------- ])
 AC_MSG_RESULT([  C compiler:           ${CC} ${CFLAGS}])
 AC_MSG_RESULT([  SQL preprocessor:     ${SQLPP}])
+AC_MSG_RESULT()
+AC_MSG_RESULT([ -------------- Additional Info ------------- ])
+if test "x$INTERRUPTTESTS" = "xyes"; then
+  AC_MSG_RESULT([  Interrupt Tests:   ENABLED])
+else
+  AC_MSG_RESULT([  Interrupt Tests:   DISABLED use: --with-interrupt-tests to enable])
+fi
 AC_MSG_RESULT()
 AC_MSG_RESULT([ -------------- Dependencies -------------- ])
 AC_MSG_RESULT([  GEOS config:          ${GEOSCONFIG}])
