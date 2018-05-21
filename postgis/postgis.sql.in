@@ -2707,14 +2707,16 @@ CREATE OR REPLACE FUNCTION postgis_transform_geometry(geometry,text,text,int)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','transform_geom'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	_COST_C_MED;
+	_COST_C_MED
+	SET search_path = @extschema@,pg_catalog;
 
 -- PostGIS equivalent of old function: transform(geometry,integer)
 CREATE OR REPLACE FUNCTION ST_Transform(geometry,integer)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME','transform'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	_COST_C_MED;
+	_COST_C_MED
+	SET search_path = @extschema@,pg_catalog;
 
 -- Availability: 2.3.0
 CREATE OR REPLACE FUNCTION ST_Transform(geom geometry, to_proj text)
