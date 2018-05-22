@@ -1,21 +1,55 @@
 env:
   global:
-    - RUNTESTFLAGS=-v
+    - CFLAGS="-g -O2 -fstack-protector -Wformat -Werror=format-security" LDFLAGS="-Wl,-Bsymbolic-functions -Wl,-z,relro"
+    - PGUSER="postgres"
+  matrix:
+    - POSTGRESQL_VERSION="9.5"
+    - POSTGRESQL_VERSION="10"
 
 addons:
-  postgresql: "9.6"
+  apt:
+    packages:
+      - eatmydata
 
 before_install:
+  - eval "${MATRIX_EVAL}"
+  - sudo sh -c "echo /usr/lib/libeatmydata/libeatmydata.so >> /etc/ld.so.preload"
+  - curl -sSfL https://github.com/mapbox/logbt/archive/v2.0.3.tar.gz | sudo tar --gunzip --extract --strip-components=1 --exclude="*md" --exclude="test*" --directory=/usr/local
+  - curl -sSfL https://raw.githubusercontent.com/mapbox/logbt/30c554dd37b6c96c23fc424f75910fc6d6696f00/bin/logbt | sudo tee /usr/local/bin/logbt > /dev/null
+  - sudo logbt --setup
+  - sudo service postgresql stop
+  - i=0; while [[ ($(ps aux | grep postgres | wc -l) -ne 1) && (i -lt 10) ]]; do i=$((1+$i)); echo $i; sleep 1; done; if [[ $i == 10 ]]; then ps aux && false; fi;
+  - sudo apt-get -y remove --purge postgresql-9.1
+  - sudo apt-get -y remove --purge postgresql-9.2
+  - sudo apt-get -y remove --purge postgresql-9.3
+  - sudo apt-get -y remove --purge postgresql-9.4
+  - sudo apt-get -y remove --purge postgresql-9.5
+  - sudo apt-get -y remove --purge postgresql-9.6
+  - sudo rm -rf /var/lib/postgresql/
+  - sudo rm -rf /var/log/postgresql/
+  - sudo rm -rf /etc/postgresql/
+  - sudo apt-get install -y --allow-unauthenticated --no-install-recommends --no-install-suggests postgresql-$POSTGRESQL_VERSION postgresql-client-$POSTGRESQL_VERSION postgresql-server-dev-$POSTGRESQL_VERSION
+    # configure it to accept local connections from postgres
+  - echo -e "# TYPE  DATABASE        USER            ADDRESS                 METHOD \nlocal   all             postgres                                trust\nlocal   all             all                                     trust\nhost    all             all             127.0.0.1/32            trust"  | sudo tee /etc/postgresql/$POSTGRESQL_VERSION/main/pg_hba.conf
+  - export PGPORT=`grep ^port /etc/postgresql/$POSTGRESQL_VERSION/main/postgresql.conf | awk '{print $3}'`
+  - sudo service postgresql restart $POSTGRESQL_VERSION
+  - psql -c "Select version();" || (sudo tail -n1000 /var/log/postgresql/postgresql-*-main.log && false)
   - sudo add-apt-repository --yes ppa:ubuntugis/ppa
   - sudo add-apt-repository --yes ppa:ubuntugis/ubuntugis-unstable
   - sudo apt-get update -qq
-  - sudo apt-get install -y --no-install-recommends
-      postgresql-9.6 postgresql-server-dev-9.6
-      libcunit1-dev xsltproc docbook-xsl docbook-mathml dblatex
-      libproj-dev libgdal-dev libgeos-dev libjson0-dev
-      libsfcgal1 libsfcgal-dev libprotobuf-c0-dev libgdal-dev 
-  - dpkg -l | grep postgresql
+  - sudo apt-get install -y --allow-unauthenticated --no-install-recommends --no-install-suggests libsfcgal1 libsfcgal-dev  libxml2-utils libcunit1-dev xsltproc docbook-xsl docbook-mathml dblatex libgeos-dev libjson0-dev libprotobuf-c0-dev libgdal-dev gdb libc6-dbg
+  - sudo sh -c "echo deb http://archive.ubuntu.com/ubuntu/ artful main restricted universe multiverse >> /etc/apt/sources.list"
+  - sudo apt-get update -qq
+  - sudo apt-get install -y --allow-unauthenticated --no-install-recommends --no-install-suggests binutils libproj-dev
+  - sudo ldconfig
   - ./autogen.sh
+
+after_failure:
+  - psql -c "Select version();" || true
+  - sudo tail -n1000 /var/log/postgresql/postgresql-*-main.log
+
+after_success:
+  - bash .github/codecov.bash
 
 language: c
 
@@ -23,21 +57,15 @@ compiler: gcc
 
 dist: trusty
 
-script:
-  - ./configure
-  - make
-  - chmod 755 /home/travis
-  - make check
-  - make check RUNTESTFLAGS='--dumprestore'
-  - sudo make install
-  - make installcheck
-  - make installcheck RUNTESTFLAGS='--dumprestore'
+cache:
+  ccache: true
 
-notifications:
-  email: false
-  irc:
-    channels:
-      - "irc.freenode.org#postgis-activity"
-    on_success: change
-    on_failure: always
-    use_notice: false
+script:
+  - ./configure CFLAGS="$CFLAGS" LDFLAGS="$LDFLAGS" $CONFIGURE_FLAGS || cat config.log
+  - make -j
+  - chmod 755 /home/travis
+  - logbt -- make check "RUNTESTFLAGS=--verbose"
+  - logbt -- make check "RUNTESTFLAGS='--dumprestore --verbose'"
+  - sudo make install
+  - logbt -- make installcheck "RUNTESTFLAGS=--verbose"
+  - logbt -- make installcheck "RUNTESTFLAGS=--dumprestore --verbose"
