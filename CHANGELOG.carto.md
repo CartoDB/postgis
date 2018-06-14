@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.4.4.1+carto-2
+
+**Release date**: 2018-XX-XX
+
+Changes:
+- Merge community branch (svn-2.4 2018-06-14)
+- Bring MVT changes from community trunk
+
 ## 2.4.4.1+carto-1
 
 **Release date**: 2018-05-21
