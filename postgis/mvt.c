@@ -687,78 +687,57 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 {
 	AFFINE affine;
 	gridspec grid;
-	LWGEOM *lwgeom_out = NULL;
 	double width = gbox->xmax - gbox->xmin;
 	double height = gbox->ymax - gbox->ymin;
 	double resx = width / extent;
 	double resy = height / extent;
-	double res = (resx < resy ? resx : resy)/2.0;
+	double res = (resx < resy ? resx : resy)/2;
 	double fx = extent / width;
 	double fy = -(extent / height);
 	double buffer_map_xunits = resx * buffer;
-	static int preserve_collapsed = true;
-	POSTGIS_DEBUGF(2, "%s called", __func__);
+	int preserve_collapsed = LW_TRUE;
+	POSTGIS_DEBUG(2, "mvt_geom called");
 
 	/* Short circuit out on EMPTY */
 	if (lwgeom_is_empty(lwgeom))
 		return NULL;
 
 	if (width == 0 || height == 0)
-		elog(ERROR, "%s: bounds width or height cannot be 0", __func__);
+		elog(ERROR, "mvt_geom: bounds width or height cannot be 0");
 
 	if (extent == 0)
-		elog(ERROR, "%s: extent cannot be 0",  __func__);
-
-	/* Convert any generic GEOMETRYCOLLECTION into a simple */
-	/* base type that reflects one of the contained types */
-	lwgeom_to_basic_type(lwgeom);
+		elog(ERROR, "mvt_geom: extent cannot be 0");
 
 	/* Remove all non-essential points (under the output resolution) */
 	lwgeom_remove_repeated_points_in_place(lwgeom, res);
 	lwgeom_simplify_in_place(lwgeom, res, preserve_collapsed);
+
 	/* If geometry has disappeared, you're done */
 	if (lwgeom_is_empty(lwgeom))
 		return NULL;
 
 	if (clip_geom)
 	{
-		const GBOX *ggbox = lwgeom_get_bbox(lwgeom);
-		GBOX bgbox = *gbox;
+		GBOX bgbox;
+		const GBOX *lwgeom_gbox = lwgeom_get_bbox(lwgeom);;
+		bgbox = *gbox;
 		gbox_expand(&bgbox, buffer_map_xunits);
-		if (!gbox_overlaps_2d(ggbox, &bgbox))
+		if (!gbox_overlaps_2d(lwgeom_gbox, &bgbox))
 		{
-			POSTGIS_DEBUGF(3, "%s: geometry outside clip box", __func__);
+			POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
 			return NULL;
 		}
-		if (!gbox_contains_2d(&bgbox, ggbox))
+		if (!gbox_contains_2d(&bgbox, lwgeom_gbox))
 		{
 			double x0 = bgbox.xmin;
 			double y0 = bgbox.ymin;
 			double x1 = bgbox.xmax;
 			double y1 = bgbox.ymax;
-#if POSTGIS_GEOS_VERSION < 35
-			LWPOLY *lwenv = lwpoly_construct_envelope(0, x0, y0, x1, y1);
-			lwgeom_out = lwgeom_intersection(lwgeom, lwpoly_as_lwgeom(lwenv));
-			lwpoly_free(lwenv);
-#else
-			lwgeom_out = lwgeom_clip_by_rect(lwgeom, x0, y0, x1, y1);
-#endif
-			POSTGIS_DEBUGF(3, "%s: no geometry after clip", __func__);
-			if (lwgeom_out == NULL || lwgeom_is_empty(lwgeom_out))
+			lwgeom = lwgeom_clip_by_rect(lwgeom, x0, y0, x1, y1);
+			POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
+			if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
 				return NULL;
 		}
-	}
-
-	/* If no clipped output we will use raw input */
-	/* This means we require the input to build on top */
-	/* of a PG_DETOAST_DATUM_COPY() */
-	if (!lwgeom_out)
-		lwgeom_out = lwgeom;
-
-	/* if polygon(s) force clockwise as per MVT spec */
-	if (lwgeom_out->type == POLYGONTYPE ||
-		lwgeom_out->type == MULTIPOLYGONTYPE) {
-        lwgeom_force_clockwise(lwgeom_out);
 	}
 
 	/* transform to tile coordinate space */
@@ -768,7 +747,7 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	affine.ifac = 1;
 	affine.xoff = -gbox->xmin * fx;
 	affine.yoff = -gbox->ymax * fy;
-	lwgeom_affine(lwgeom_out, &affine);
+	lwgeom_affine(lwgeom, &affine);
 
 	/* snap to integer precision, removing duplicate points */
 	memset(&grid, 0, sizeof(gridspec));
@@ -776,19 +755,31 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	grid.ipy = 0;
 	grid.xsize = 1;
 	grid.ysize = 1;
-	lwgeom_grid_in_place(lwgeom_out, &grid);
+	lwgeom_grid_in_place(lwgeom, &grid);
 
-	if (lwgeom_out == NULL || lwgeom_is_empty(lwgeom_out))
+	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
 		return NULL;
 
-	/* if polygon(s) force valid as per MVT spec */
-    // if (lwgeom_out->type == POLYGONTYPE ||
-    //     lwgeom_out->type == MULTIPOLYGONTYPE) {
-    //     /* Watch out, does make_valid try to force orientation? */
-    //     lwgeom_out = lwgeom_make_valid(lwgeom_out);
-    // }
+	/* if polygon(s) make valid and force clockwise as per MVT spec */
+	if (lwgeom->type == POLYGONTYPE ||
+		lwgeom->type == MULTIPOLYGONTYPE ||
+		lwgeom->type == COLLECTIONTYPE)
+	{
+		lwgeom = lwgeom_make_valid(lwgeom);
+		/* In image coordinates CW actually comes out a CCW, so */
+		/* we also reverse. ¯\_(ツ)_/¯ */
+		lwgeom_force_clockwise(lwgeom);
+		lwgeom_reverse(lwgeom); // TODO: Replace with _in_place from trunk to match all the tests
+	}
 
-	return lwgeom_out;
+	/* if geometry collection extract highest dimensional geometry type */
+	if (lwgeom->type == COLLECTIONTYPE)
+		lwgeom_to_basic_type(lwgeom);
+
+	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
+		return NULL;
+
+	return lwgeom;
 }
 
 
