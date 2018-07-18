@@ -756,10 +756,10 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 		lwgeom_out = lwgeom;
 
 	/* if polygon(s) force clockwise as per MVT spec */
-	if (lwgeom_out->type == POLYGONTYPE ||
-		lwgeom_out->type == MULTIPOLYGONTYPE) {
-        lwgeom_force_clockwise(lwgeom_out);
-	}
+	// if (lwgeom_out->type == POLYGONTYPE ||
+	// 	lwgeom_out->type == MULTIPOLYGONTYPE) {
+	//         lwgeom_force_clockwise(lwgeom_out);
+	// }
 
 	/* transform to tile coordinate space */
 	memset(&affine, 0, sizeof(affine));
@@ -782,11 +782,14 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 		return NULL;
 
 	/* if polygon(s) force valid as per MVT spec */
-    // if (lwgeom_out->type == POLYGONTYPE ||
-    //     lwgeom_out->type == MULTIPOLYGONTYPE) {
-    //     /* Watch out, does make_valid try to force orientation? */
-    //     lwgeom_out = lwgeom_make_valid(lwgeom_out);
-    // }
+	if (lwgeom_out->type == POLYGONTYPE ||
+	    lwgeom_out->type == MULTIPOLYGONTYPE)
+	{
+		/* Watch out, does make_valid try to force orientation? */
+		// lwgeom_out = lwgeom_make_valid(lwgeom_out);
+		lwgeom_force_clockwise(lwgeom_out);
+		lwgeom_reverse(lwgeom_out);
+	}
 
 	return lwgeom_out;
 }
