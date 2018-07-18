@@ -340,25 +340,26 @@ void ptarray_free(POINTARRAY *pa)
 
 
 void
-ptarray_reverse(POINTARRAY *pa)
+ptarray_reverse_in_place(POINTARRAY *pa)
 {
-	/* TODO change this to double array operations once point array is double aligned */
-	POINT4D pbuf;
-	uint32_t i;
-	int ptsize = ptarray_point_size(pa);
+	int i;
 	int last = pa->npoints-1;
 	int mid = pa->npoints/2;
 
-	for (i=0; i<mid; i++)
+	double *d = (double*)(pa->serialized_pointlist);
+	int j;
+	int ndims = FLAGS_NDIMS(pa->flags);
+	for (i = 0; i < mid; i++)
 	{
-		uint8_t *from, *to;
-		from = getPoint_internal(pa, i);
-		to = getPoint_internal(pa, (last-i));
-		memcpy((uint8_t *)&pbuf, to, ptsize);
-		memcpy(to, from, ptsize);
-		memcpy(from, (uint8_t *)&pbuf, ptsize);
+		for (j = 0; j < ndims; j++)
+		{
+			double buf;
+			buf = d[i*ndims+j];
+			d[i*ndims+j] = d[(last-i)*ndims+j];
+			d[(last-i)*ndims+j] = buf;
+		}
 	}
-
+	return;
 }
 
 
@@ -2027,8 +2028,6 @@ ptarray_startpoint(const POINTARRAY* pa, POINT4D* pt)
 }
 
 
-
-
 /*
  * Stick an array of points to the given gridspec.
  * Return "gridded" points in *outpts and their number in *outptsn.
@@ -2037,50 +2036,10 @@ ptarray_startpoint(const POINTARRAY* pa, POINT4D* pt)
  * into one single point.
  *
  */
-POINTARRAY *
-ptarray_grid(const POINTARRAY *pa, const gridspec *grid)
-{
-	POINT4D pt;
-	int ipn; /* input point numbers */
-	POINTARRAY *dpa;
-
-	LWDEBUGF(2, "ptarray_grid called on %p", pa);
-
-	dpa = ptarray_construct_empty(FLAGS_GET_Z(pa->flags),FLAGS_GET_M(pa->flags), pa->npoints);
-
-	for (ipn=0; ipn<pa->npoints; ++ipn)
-	{
-
-		getPoint4d_p(pa, ipn, &pt);
-
-		if ( grid->xsize )
-			pt.x = rint((pt.x - grid->ipx)/grid->xsize) *
-			         grid->xsize + grid->ipx;
-
-		if ( grid->ysize )
-			pt.y = rint((pt.y - grid->ipy)/grid->ysize) *
-			         grid->ysize + grid->ipy;
-
-		if ( FLAGS_GET_Z(pa->flags) && grid->zsize )
-			pt.z = rint((pt.z - grid->ipz)/grid->zsize) *
-			         grid->zsize + grid->ipz;
-
-		if ( FLAGS_GET_M(pa->flags) && grid->msize )
-			pt.m = rint((pt.m - grid->ipm)/grid->msize) *
-			         grid->msize + grid->ipm;
-
-		ptarray_append_point(dpa, &pt, LW_FALSE);
-
-	}
-
-	return dpa;
-}
-
-
 void
 ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid)
 {
-	int i, j = 0;
+	uint32_t i, j = 0;
 	POINT4D *p, *p_out = NULL;
 	int ndims = FLAGS_NDIMS(pa->flags);
 	int has_z = FLAGS_GET_Z(pa->flags);
@@ -2150,7 +2109,7 @@ ptarray_npoints_in_rect(const POINTARRAY *pa, const GBOX *gbox)
 {
 	const POINT2D *pt;
 	int n = 0;
-	int i;
+	uint32_t i;
 	for ( i = 0; i < pa->npoints; i++ )
 	{
 		pt = getPoint2d_cp(pa, i);
@@ -2159,5 +2118,3 @@ ptarray_npoints_in_rect(const POINTARRAY *pa, const GBOX *gbox)
 	}
 	return n;
 }
-
-

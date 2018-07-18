@@ -338,9 +338,39 @@ LWCOLLECTION *lwcollection_clone_deep(const LWCOLLECTION *lwgeom);
 GBOX *gbox_clone(const GBOX *gbox);
 
 /*
- * Reverse
- */
-extern void lwcircstring_reverse(LWCIRCSTRING *curve);
+* Clockwise
+*/
+void lwpoly_force_clockwise(LWPOLY *poly);
+void lwtriangle_force_clockwise(LWTRIANGLE *triangle);
+int lwpoly_is_clockwise(LWPOLY *poly);
+int lwtriangle_is_clockwise(LWTRIANGLE *triangle);
+int ptarray_isccw(const POINTARRAY *pa);
+
+/*
+* Same
+*/
+char ptarray_same(const POINTARRAY *pa1, const POINTARRAY *pa2);
+char lwpoint_same(const LWPOINT *p1, const LWPOINT *p2);
+char lwline_same(const LWLINE *p1, const LWLINE *p2);
+char lwpoly_same(const LWPOLY *p1, const LWPOLY *p2);
+char lwtriangle_same(const LWTRIANGLE *p1, const LWTRIANGLE *p2);
+char lwcollection_same(const LWCOLLECTION *p1, const LWCOLLECTION *p2);
+char lwcircstring_same(const LWCIRCSTRING *p1, const LWCIRCSTRING *p2);
+
+/*
+* Transform
+*/
+int point4d_transform(POINT4D *pt, projPJ srcpj, projPJ dstpj);
+
+/*
+* Shift
+*/
+void ptarray_longitude_shift(POINTARRAY *pa);
+
+/*
+* Reverse
+*/
+void ptarray_reverse_in_place(POINTARRAY *pa);
 
 /*
 * Startpoint
@@ -381,12 +411,14 @@ int lwtin_is_closed(const LWTIN *tin);
 
 
 LWGEOM* lwgeom_grid(const LWGEOM *lwgeom, const gridspec *grid);
-LWCOLLECTION* lwcollection_grid(const LWCOLLECTION *coll, const gridspec *grid);
-LWPOINT* lwpoint_grid(const LWPOINT *point, const gridspec *grid);
-LWPOLY* lwpoly_grid(const LWPOLY *poly, const gridspec *grid);
-LWLINE* lwline_grid(const LWLINE *line, const gridspec *grid);
-LWCIRCSTRING* lwcircstring_grid(const LWCIRCSTRING *line, const gridspec *grid);
-POINTARRAY* ptarray_grid(const POINTARRAY *pa, const gridspec *grid);
+
+void lwgeom_grid_in_place(LWGEOM *lwgeom, const gridspec *grid);
+void lwcollection_grid_in_place(LWCOLLECTION *coll, const gridspec *grid);
+void lwpoint_grid_in_place(LWPOINT *point, const gridspec *grid);
+void lwpoly_grid_in_place(LWPOLY *poly, const gridspec *grid);
+void lwline_grid_in_place(LWLINE *line, const gridspec *grid);
+void lwcircstring_grid_in_place(LWCIRCSTRING *line, const gridspec *grid);
+void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);
 
 /* IN PLACE FUNCTIONS */
 void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);

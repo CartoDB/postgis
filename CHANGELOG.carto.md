@@ -6,6 +6,7 @@
 
 Changes:
 - Merge community branch (svn-2.4 2018-07-18)
+- Backport some other X_in_place functions (specially lwgeom_reverse_in_place)
 
 ## 2.4.4.1+carto-1
 
