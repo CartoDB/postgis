@@ -685,7 +685,7 @@ lwgeom_to_basic_type(LWGEOM *geom)
  */
 LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buffer, bool clip_geom)
 {
-AFFINE affine;
+	AFFINE affine;
 	gridspec grid;
 	double width = gbox->xmax - gbox->xmin;
 	double height = gbox->ymax - gbox->ymin;
