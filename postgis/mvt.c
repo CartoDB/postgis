@@ -163,6 +163,8 @@ static void encode_point(mvt_agg_context *ctx, LWPOINT *point)
 	feature->type = VECTOR_TILE__TILE__GEOM_TYPE__POINT;
 	feature->has_type = 1;
 	feature->n_geometry = 3;
+	feature->id = ctx->c;
+	feature->has_id = 1;
 	feature->geometry = palloc(sizeof(*feature->geometry) * 3);
 	encode_ptarray_initial(ctx, MVT_POINT, point->point, feature->geometry);
 }
