@@ -6,7 +6,9 @@
 
 Changes:
 - Merge community branch (svn-2.4 2018-07-18)
-- Backport some other X_in_place functions (specially lwgeom_reverse_in_place)
+- Backport some other X_in_place functions (specially lwgeom_reverse_in_place)ç
+- MVT: Backport fix for mvt combination
+- MVT: Backport current status of trunk mvt_geom into mvt_geom_fast.
 
 ## 2.4.4.1+carto-1
 
