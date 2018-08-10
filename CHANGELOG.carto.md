@@ -6,6 +6,7 @@
 
 Changes:
 - Merge community branch (svn-2.4 2018-08-13)
+- MVT: Backport [`3c81bcc`](https://github.com/postgis/postgis/commit/3c81bccd115faee5bfb54878f771507c69a2f09a): Speedup MVT column parsing
 
 
 ## 2.4.4.2+carto-1
