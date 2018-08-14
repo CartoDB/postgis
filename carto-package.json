@@ -1,0 +1,17 @@
+{
+    "name": "postgis",
+    "current_version": {
+        "requires": {
+            "postgres": ">=10.1.1"
+        },
+        "_comment_on_works_with": "Added here versions w/ proper PARALLEL support",
+        "works_with": {
+            "dataservices-api-server-extension": ">=0.29.0",
+            "dataservices-api-client-extension": ">=0.22.0",
+            "crankshaft": ">=0.6.1"
+        }
+    },
+
+    "exceptional_versions": {
+    }
+}
