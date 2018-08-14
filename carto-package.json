@@ -10,11 +10,8 @@
             "protobuf-c": ">=1.2.1",
             "libxml2": ">=2.9.3"
         },
-        "_comment_on_works_with": "Added here versions w/ proper PARALLEL support",
+
         "works_with": {
-            "dataservices-api-server-extension": ">=0.29.0",
-            "dataservices-api-client-extension": ">=0.22.0",
-            "crankshaft": ">=0.6.1"
         }
     },
 
