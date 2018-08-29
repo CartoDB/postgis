@@ -8,6 +8,7 @@ Changes:
 - Merge community branch (svn-2.4 2018-08-13)
 - MVT: Backport [`3c81bccd1`](https://github.com/postgis/postgis/commit/3c81bccd115faee5bfb54878f771507c69a2f09a): Speedup MVT column parsing
 - MVT: Backport [`ae6f8ec39`](https://github.com/postgis/postgis/commit/ae6f8ec390c1c4f045ef7ae70d7aa138ff64db73): Fix resource leak when the first geometry is NULL
+- MVT Backport (from 3.0) [`e5c92b18f`](https://github.com/postgis/postgis/commit/e5c92b18ffad323b3996fd68f0b23f80dc5bca28): Drop geometries smaller than the resolution
 
 ## 2.4.4.2+carto-1
 
