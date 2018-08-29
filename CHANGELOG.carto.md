@@ -2,7 +2,7 @@
 
 ## 2.4.4.3+carto-1
 
-**Release date**: 2018-XX-XX
+**Release date**: 2018-08-29
 
 Changes:
 - Merge community branch (svn-2.4 2018-08-13)
