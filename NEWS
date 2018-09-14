@@ -1,7 +1,14 @@
-PostGIS 2.4.5
+PostGIS 2.4.6
 2018/xx/xx
 
-  * Bug Fixes and Enchantments
+  * Bug Fixes and Enhancements
+
+
+
+PostGIS 2.4.5
+2018/09/12
+
+  * Bug Fixes and Enhancements
 
   - #4031, Survive to big MaxError tolerances passed to ST_CurveToLine
            (Sandro Santilli)
@@ -13,10 +20,12 @@ PostGIS 2.4.5
            (Paul Ramsey)
   - #3980, delay freeing input until processing complete (lucasvr)
   - #4090, PG 11 support (Paul Ramsey, Raúl Marín)
+  - #4077, Serialization failure for particular empty geometry cases (Paul Ramsey)
   - #3997, fix bug in lwgeom_median and avoid division by zero (Raúl Marín)
   - #4093, Inconsistent results from qsort callback (yugr)
   - #4081, Geography DWithin() issues for certain cases (Paul Ramsey)
   - #4105, Parallel build of tarball (Bas Couwenberg)
+  - #4163, MVT: Fix resource leak when the first geometry is NULL (Raúl Marín)
 
 
 PostGIS 2.4.4
