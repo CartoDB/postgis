@@ -840,14 +840,23 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
 		return NULL;
 
-	/* if polygon(s) make valid and force clockwise as per MVT spec */
 	if (lwgeom->type == POLYGONTYPE ||
 		lwgeom->type == MULTIPOLYGONTYPE ||
 		lwgeom->type == COLLECTIONTYPE)
 	{
+		/* Force validation as per MVT spec */
 		lwgeom = lwgeom_make_valid(lwgeom);
-		/* In image coordinates CW actually comes out a CCW, so */
-		/* we also reverse. ¯\_(ツ)_/¯ */
+
+		/* Drop type changes tp play nice with MVT renderers */
+		if (!(lwgeom->type == POLYGONTYPE ||
+			lwgeom->type == MULTIPOLYGONTYPE ||
+			lwgeom->type == COLLECTIONTYPE))
+		{
+			lwgeom_free(lwgeom);
+			return NULL;
+		}
+
+		/* In image coordinates CW actually comes out a CCW, so we reverse */
 		lwgeom_force_clockwise(lwgeom);
 		lwgeom_reverse_in_place(lwgeom);
 	}
@@ -944,8 +953,19 @@ LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buf
 
 	/* if polygon(s) make valid and force clockwise as per MVT spec */
 	if (lwgeom->type == POLYGONTYPE ||
-	    lwgeom->type == MULTIPOLYGONTYPE) {
-	    lwgeom = lwgeom_make_valid(lwgeom);
+	    lwgeom->type == MULTIPOLYGONTYPE)
+	{
+		lwgeom = lwgeom_make_valid(lwgeom);
+
+		/* Drop type changes to play nice with MVT renderers */
+		if (!(lwgeom->type == POLYGONTYPE ||
+		      lwgeom->type == MULTIPOLYGONTYPE ||
+		      lwgeom->type == COLLECTIONTYPE))
+		{
+			lwgeom_free(lwgeom);
+			return NULL;
+		}
+
 		/* Because we are in image coordinates, we need to go to CCW in */
 		/* order to get a CW output in image space */
 		lwgeom_force_clockwise(lwgeom);
@@ -959,8 +979,18 @@ LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buf
 		lwgeom = lwgeom_homogenize(lwgeom);
 		/* if polygon(s) make valid and force clockwise as per MVT spec */
 		if (lwgeom->type == POLYGONTYPE ||
-		    lwgeom->type == MULTIPOLYGONTYPE) {
-		    lwgeom = lwgeom_make_valid(lwgeom);
+		    lwgeom->type == MULTIPOLYGONTYPE)
+		{
+			lwgeom = lwgeom_make_valid(lwgeom);
+
+			/* Drop type changes to play nice with MVT renderers */
+			if (!(lwgeom->type == POLYGONTYPE ||
+				lwgeom->type == MULTIPOLYGONTYPE))
+			{
+				lwgeom_free(lwgeom);
+				return NULL;
+			}
+
 			/* Because we are in image coordinates, we need to go to CCW in */
 			/* order to get a CW output in image space */
 			lwgeom_force_clockwise(lwgeom);
