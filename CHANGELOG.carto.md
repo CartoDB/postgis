@@ -7,6 +7,7 @@
 
 Changes:
 - Merge community branch (svn-2.4 2018-09-14)
+- MVT: Backport [`bcbf7b1`](https://github.com/postgis/postgis/commit/bcbf7b193f66f29afa983602cb537316b6c2fd79): Avoid type changes due to validation
 
 
 ## 2.4.4.3+carto-1
