@@ -1,9 +1,9 @@
 # Changelog
 
 
-## 2.4.5.1+carto-1
+## 2.4.4.4+carto-1
 
-**Release date**: 2018-XX-XX
+**Release date**: 2018-10-01
 
 Changes:
 - Merge community branch (svn-2.4 2018-10-01)
