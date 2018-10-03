@@ -718,29 +718,47 @@ static int max_type(LWCOLLECTION *lwcoll)
 
 
 static void
-lwgeom_to_basic_type(LWGEOM *geom)
+lwgeom_to_basic_type(LWGEOM *geom, uint8 original_type)
 {
 	if (lwgeom_get_type(geom) == COLLECTIONTYPE)
 	{
-		/* MVT doesn't handle generic collections, so we */
-		/* need to strip them down to a typed collection */
-		/* by finding the largest basic type available and */
-		/* using that as the basis of a typed collection. */
 		LWCOLLECTION *g = (LWCOLLECTION*)geom;
-		int i, maxtype = 0;
+		LWCOLLECTION *gc = lwcollection_extract(g, original_type);
+		*g = *gc;
+	}
+}
+
+
+/* For a given geometry, look for the highest dimensional basic type, that is,
+ * point, line or polygon */
+static uint8
+lwgeom_get_basic_type(LWGEOM *geom)
+{
+	switch(geom->type)
+	{
+	case POINTTYPE:
+	case LINETYPE:
+	case POLYGONTYPE:
+		return geom->type;
+	case MULTIPOINTTYPE:
+	case MULTILINETYPE:
+	case MULTIPOLYGONTYPE:
+		return geom->type - 3; /* Based on LWTYPE positions */
+	case COLLECTIONTYPE:
+	{
+		uint32_t i;
+		uint8 type = 0;
+		LWCOLLECTION *g = (LWCOLLECTION*)geom;
 		for (i = 0; i < g->ngeoms; i++)
 		{
 			LWGEOM *sg = g->geoms[i];
-			if (sg->type > maxtype && sg->type < COLLECTIONTYPE)
-				maxtype = sg->type;
+			type = Max(type, lwgeom_get_basic_type(sg));
 		}
-		if (maxtype > 3) maxtype -= 3;
-		/* Force the working geometry to be a simpler version */
-		/* of itself */
-		LWCOLLECTION *gc = lwcollection_extract(g, maxtype);
-		*g = *gc;
+		return type;
 	}
-	return;
+	default:
+		elog(ERROR, "%s: Invalid type (%d)", __func__, geom->type);
+	}
 }
 
 
@@ -756,6 +774,7 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	double height = gbox->ymax - gbox->ymin;
 	double resx, resy, res, fx, fy;
 	int preserve_collapsed = LW_TRUE;
+	const uint8_t basic_type = lwgeom_get_basic_type(lwgeom);
 	POSTGIS_DEBUG(2, "mvt_geom called");
 
 	/* Short circuit out on EMPTY */
@@ -823,9 +842,7 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 			/* For some polygons, the simplify step might have left them
 			 * as invalid, which can cause clipping to return the complementary
 			 * geometry of what it should */
-			if ((lwgeom->type == POLYGONTYPE ||
-				lwgeom->type == MULTIPOLYGONTYPE ||
-				lwgeom->type == COLLECTIONTYPE) &&
+			if ((basic_type == POLYGONTYPE) &&
 			    !gbox_contains_2d(&pre_clip_box, lwgeom_get_bbox(clipped_geom)))
 			{
 				/* Other options would be to fix the geometry and
@@ -859,21 +876,10 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
 		return NULL;
 
-	if (lwgeom->type == POLYGONTYPE ||
-		lwgeom->type == MULTIPOLYGONTYPE ||
-		lwgeom->type == COLLECTIONTYPE)
+	if (basic_type == POLYGONTYPE)
 	{
 		/* Force validation as per MVT spec */
 		lwgeom = lwgeom_make_valid(lwgeom);
-
-		/* Drop type changes tp play nice with MVT renderers */
-		if (!(lwgeom->type == POLYGONTYPE ||
-			lwgeom->type == MULTIPOLYGONTYPE ||
-			lwgeom->type == COLLECTIONTYPE))
-		{
-			lwgeom_free(lwgeom);
-			return NULL;
-		}
 
 		/* In image coordinates CW actually comes out a CCW, so we reverse */
 		lwgeom_force_clockwise(lwgeom);
@@ -882,7 +888,14 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
 
 	/* if geometry collection extract highest dimensional geometry type */
 	if (lwgeom->type == COLLECTIONTYPE)
-		lwgeom_to_basic_type(lwgeom);
+		lwgeom_to_basic_type(lwgeom, basic_type);
+
+	if (basic_type != lwgeom_get_basic_type(lwgeom))
+	{
+		/* Drop type changes to play nice with MVT renderers */
+		POSTGIS_DEBUG(3, "mvt_geom: Dropping geometry after type change");
+		return NULL;
+	}
 
 	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
 		return NULL;
