@@ -6,6 +6,8 @@
 
 Changes:
 - Merge community branch (svn-2.4 2018-10-03)
+- MVT: Backport [`35db4ea`](https://github.com/postgis/postgis/commit/4385284de6156a83a51cd640b5362ccd22d90492): St_AsMVTGeom: Handle type changes in geometry collections
+
 
 ## 2.4.4.4+carto-1
 
