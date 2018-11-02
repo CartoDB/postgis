@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.4.6+carto-1
+
+**Release date**: 2018-11-02
+
+Changes:
+- No changes from 2.4.4.5+carto-1
+
 ## 2.4.4.5+carto-1
 
 **Release date**: 2018-10-03
