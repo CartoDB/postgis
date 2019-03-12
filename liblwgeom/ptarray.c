@@ -1429,7 +1429,7 @@ ptarray_longitude_shift(POINTARRAY *pa)
 	}
 }
 
-static void
+void
 ptarray_copy_point(POINTARRAY *pa, uint32_t from, uint32_t to)
 {
 	int ndims = FLAGS_NDIMS(pa->flags);
@@ -1465,7 +1465,7 @@ ptarray_copy_point(POINTARRAY *pa, uint32_t from, uint32_t to)
 	return;
 }
 
-static void
+void
 ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, uint32_t min_points)
 {
 	uint32_t i;
@@ -1547,68 +1547,6 @@ POINTARRAY *
 ptarray_remove_repeated_points(const POINTARRAY *in, double tolerance)
 {
 	return ptarray_remove_repeated_points_minpoints(in, tolerance, 2);
-}
-
-
-void
-ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int min_points)
-{
-	int i;
-	double tolsq = tolerance * tolerance;
-	const POINT2D *last = NULL;
-	const POINT2D *pt;
-	int n_points = pa->npoints;
-	int n_points_out = 1;
-	double dsq = FLT_MAX;
-
-	/* No-op on short inputs */
-	if ( n_points <= min_points ) return;
-
-	last = getPoint2d_cp(pa, 0);
-	for (i = 1; i < n_points; i++)
-	{
-		int last_point = (i == n_points-1);
-
-		/* Look straight into the abyss */
-		pt = getPoint2d_cp(pa, i);
-
-		/* Don't drop points if we are running short of points */
-		if (n_points - i > min_points - n_points_out)
-		{
-			if (tolerance > 0.0)
-			{
-				/* Only drop points that are within our tolerance */
-				dsq = distance2d_sqr_pt_pt(last, pt);
-				/* Allow any point but the last one to be dropped */
-				if (!last_point && dsq <= tolsq)
-				{
-					continue;
-				}
-			}
-			else
-			{
-				/* At tolerance zero, only skip exact dupes */
-				if (memcmp((char*)pt, (char*)last, ptarray_point_size(pa)) == 0)
-					continue;
-			}
-
-			/* Got to last point, and it's not very different from */
-			/* the point that preceded it. We want to keep the last */
-			/* point, not the second-to-last one, so we pull our write */
-			/* index back one value */
-			if (last_point && n_points_out > 1 && tolerance > 0.0 && dsq <= tolsq)
-			{
-				n_points_out--;
-			}
-		}
-
-		/* Compact all remaining values to front of array */
-		ptarray_copy_point(pa, i, n_points_out++);
-		last = pt;
-	}
-	/* Adjust array length */
-	pa->npoints = n_points_out;
-	return;
 }
 
 

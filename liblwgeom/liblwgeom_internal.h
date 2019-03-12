@@ -423,8 +423,8 @@ void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);
 /* IN PLACE FUNCTIONS */
 void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);
 void ptarray_simplify_in_place(POINTARRAY *pa, double epsilon, unsigned int minpts);
-void ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int min_points);
-void ptarray_copy_point(POINTARRAY *pa, int from, int to);
+void ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, uint32_t min_points);
+void ptarray_copy_point(POINTARRAY *pa, uint32_t from, uint32_t to);
 
 /*
 * What side of the line formed by p1 and p2 does q fall?
