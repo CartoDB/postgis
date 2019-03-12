@@ -2,6 +2,56 @@
 <appendix id="release_notes">
   <title>Appendix</title>
     <subtitle>Release Notes</subtitle>
+    <sect1>
+      <title>Release 2.4.7</title>
+      <para>Release date: 2019/03/11</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect><title>Bug Fixes and Enhancements</title>
+        <para>#4139, Make mixed-dimension ND index build tree correctly.
+          WARNING: REINDEX your ND index on tables that have records with different M/Z
+                dimensions for &amp;&amp;&amp; operator to work predictably.
+                (Darafei Praliaskouski, Arthur Lesuisse, Andrew Gierth, Raúl Marín)</para>
+        <para>#4273, Tighter parsing of WKT (Paul Ramsey)</para>
+        <para>#4267, Enable Proj 6 deprecated APIs (Darafei Praliaskouski, Raúl Marín)</para>
+        <para>#4290, More robust distance calculations in geography (Paul Ramsey)</para>
+        <para>#4292, ST_AsMVT: parse JSON numeric values with decimals as doubles (Raúl Marín)</para>
+        <para>#4289, ST_AsMVTGeom: Transform coordinates space before clipping (Raúl Marín)</para>
+        <para>#4275, Avoid passing a NULL pointer to GEOSisEmpty (Raúl Marín)</para>
+        <para>#4296, Use `server_version_num` instead of parsing `version()` (Raúl Marín)</para>
+        <para>#4298, Geodetic tolerance issue in 32-bit (Paul Ramsey)</para>
+        <para>#4283, Avoid final point duplicates for circle stroking (Paul Ramsey)</para>
+        <para>#4313, #4307, PostgreSQL 12 compatibility (Laurenz Albe, Raúl Marín)</para>
+        <para>#4290, Schema qualify geometry casts in raster functions (Regina Obe)</para>
+        <para>#4086, Constraint violation loading tiger_data (zcta5 geometry type) (Regina Obe)</para>
+      </simplesect>
+    </sect1>
+    <sect1>
+      <title>Release 2.4.6</title>
+      <para>Release date: 2018/11/24</para>
+      <para>This is a bug fix and performance improvement release.</para>
+      <simplesect><title>Bug Fixes and Enhancements</title>
+        <para>#4160, Use qualified names in topology extension install (Raúl Marín)</para>
+        <para>#4181, ST_AsMVTGeom: Avoid type changes due to validation (Raúl Marín)</para>
+        <para>#4183, ST_AsMVTGeom: Drop invalid geometries after simplification (Raúl Marín)</para>
+        <para>#4189, Fix undefined behaviour in SADFWrite (Raúl Marín)</para>
+        <para>#4191, Fix undefined behaviour in ptarray_clone_deep (Raúl Marín)</para>
+        <para>#4020, Fix leftovers in topology upgrade from 2.1 (Sandro Santilli)</para>
+        <para>#4206, Replace deprecated use of getrelid with rt_fetch
+           because getrelid is long deprecated and removed in pg12dev (Laurenz Albe)</para>
+        <para>#3457, Fix raster envelope shortcut in ST_Clip (Sai-bot)</para>
+        <para>#4215, Use floating point compare in ST_DumpAsPolygons (Darafei Praliaskouski)</para>
+        <para>#4059, #4177, Remove use of variable length arrays (Paul Ramsey)</para>
+        <para>#4216, Return to slicing for bbox access in gserialized (Paul Ramsey)</para>
+        <para>#4136, Proper repeated point removal on small polygons (Paul Ramsey)</para>
+        <para>#4223, ST_DistanceTree error for near parallel boxes (Paul Ramsey)</para>
+        <para>#4326, Allocate enough memory in gidx_to_string (Raúl Marín)</para>
+        <para>#4190, Avoid undefined behaviour in gserialized_estimate (Raúl Marín)</para>
+        <para>#4247, Avoid undefined behaviour in next_float functions (Raúl Marín)</para>
+        <para>#4249, Fix undefined behaviour in raster intersection (Raúl Marín)</para>
+        <para>#4246, Fix undefined behaviour in ST_3DDistance (Raúl Marín)</para>
+        <para>#4244, Avoid unaligned memory access in BOX2D_out (Raúl Marín)</para>
+      </simplesect>
+    </sect1>
 
     <sect1>
       <title>Release 2.4.5</title>

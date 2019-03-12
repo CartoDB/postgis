@@ -1,12 +1,50 @@
-PostGIS 2.4.6
-2018/xx/xx
+PostGIS 2.4.7
+2019/03/11
 
-  * Bug Fixes and Enhancements
+  * Bug Fixes and Enhancements *
+
+  - #4139, Make mixed-dimension ND index build tree correctly.
+  WARNING: REINDEX your ND index on tables that have records with different M/Z
+           dimensions for &&& operator to work predictably.
+           (Darafei Praliaskouski, Arthur Lesuisse, Andrew Gierth, Raúl Marín)
+  - #4273, Tighter parsing of WKT (Paul Ramsey)
+  - #4267, Enable Proj 6 deprecated APIs (Darafei Praliaskouski, Raúl Marín)
+  - #4290, More robust distance calculations in geography (Paul Ramsey)
+  - #4292, ST_AsMVT: parse JSON numeric values with decimals as doubles (Raúl Marín)
+  - #4289, ST_AsMVTGeom: Transform coordinates space before clipping (Raúl Marín)
+  - #4275, Avoid passing a NULL pointer to GEOSisEmpty (Raúl Marín)
+  - #4296, Use `server_version_num` instead of parsing `version()` (Raúl Marín)
+  - #4298, Geodetic tolerance issue in 32-bit (Paul Ramsey)
+  - #4283, Avoid final point duplicates for circle stroking (Paul Ramsey)
+  - #4313, #4307, PostgreSQL 12 compatibility (Laurenz Albe, Raúl Marín)
+  - #4290, Schema qualify geometry casts in raster functions (Regina Obe)
+  - #4086, Constraint violation loading tiger_data (zcta5 geometry type) (Regina Obe)
+
+PostGIS 2.4.6
+2018/11/24
+
+  * Bug Fixes and Enhancements *
+
   - #4160, Use qualified names in topology extension install (Raúl Marín)
-  - #4181, St_AsMVTGeom: Avoid type changes due to validation (Raúl Marín)
-  - #4183, St_AsMVTGeom: Drop invalid geometries after simplification (Raúl Marín)
+  - #4181, ST_AsMVTGeom: Avoid type changes due to validation (Raúl Marín)
+  - #4183, ST_AsMVTGeom: Drop invalid geometries after simplification (Raúl Marín)
   - #4189, Fix undefined behaviour in SADFWrite (Raúl Marín)
   - #4191, Fix undefined behaviour in ptarray_clone_deep (Raúl Marín)
+  - #4020, Fix leftovers in topology upgrade from 2.1 (Sandro Santilli)
+  - #4206, Replace deprecated use of getrelid with rt_fetch
+           because getrelid is long deprecated and removed in pg12dev (Laurenz Albe)
+  - #3457, Fix raster envelope shortcut in ST_Clip (Sai-bot)
+  - #4215, Use floating point compare in ST_DumpAsPolygons (Darafei Praliaskouski)
+  - #4059, #4177, Remove use of variable length arrays (Paul Ramsey)
+  - #4216, Return to slicing for bbox access in gserialized (Paul Ramsey)
+  - #4136, Proper repeated point removal on small polygons (Paul Ramsey)
+  - #4223, ST_DistanceTree error for near parallel boxes (Paul Ramsey)
+  - #4326, Allocate enough memory in gidx_to_string (Raúl Marín)
+  - #4190, Avoid undefined behaviour in gserialized_estimate (Raúl Marín)
+  - #4247, Avoid undefined behaviour in next_float functions (Raúl Marín)
+  - #4249, Fix undefined behaviour in raster intersection (Raúl Marín)
+  - #4246, Fix undefined behaviour in ST_3DDistance (Raúl Marín)
+  - #4244, Avoid unaligned memory access in BOX2D_out (Raúl Marín)
 
 
 PostGIS 2.4.5
