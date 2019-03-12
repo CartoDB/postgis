@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.4.4.7+carto-1
+## 2.4.7.1+carto-1
 
 **Release date**: 2019-XX-XX
 
