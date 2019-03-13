@@ -2,7 +2,7 @@
 
 ## 2.4.7.1+carto-1
 
-**Release date**: 2019-XX-XX
+**Release date**: 2019-03-13
 
 Changes:
 - carto-package.json: Declare compatibility guaranteed only with PG 10.
