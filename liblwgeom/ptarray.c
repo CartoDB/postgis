@@ -1429,92 +1429,53 @@ ptarray_longitude_shift(POINTARRAY *pa)
 	}
 }
 
-
-/*
- * Returns a POINTARRAY with consecutive equal points
- * removed. Equality test on all dimensions of input.
- *
- * Always returns a newly allocated object.
- *
- */
-POINTARRAY *
-ptarray_remove_repeated_points_minpoints(const POINTARRAY *in, double tolerance, int minpoints)
+void
+ptarray_copy_point(POINTARRAY *pa, uint32_t from, uint32_t to)
 {
-	POINTARRAY* out;
-	size_t ptsize;
-	size_t ipn, opn;
-	const POINT2D *last_point, *this_point;
-	double tolsq = tolerance * tolerance;
-
-	if ( minpoints < 1 ) minpoints = 1;
-
-	LWDEBUGF(3, "%s called", __func__);
-
-	/* Single or zero point arrays can't have duplicates */
-	if ( in->npoints < 3 ) return ptarray_clone_deep(in);
-
-	ptsize = ptarray_point_size(in);
-
-	LWDEBUGF(3, " ptsize: %d", ptsize);
-
-	/* Allocate enough space for all points */
-	out = ptarray_construct(FLAGS_GET_Z(in->flags),
-	                        FLAGS_GET_M(in->flags), in->npoints);
-
-	/* Now fill up the actual points (NOTE: could be optimized) */
-
-	opn=1;
-	/* Keep the first point */
-	memcpy(getPoint_internal(out, 0), getPoint_internal(in, 0), ptsize);
-	last_point = getPoint2d_cp(in, 0);
-	LWDEBUGF(3, " first point copied, out points: %d", opn);
-	for ( ipn = 1; ipn < in->npoints; ++ipn)
+	int ndims = FLAGS_NDIMS(pa->flags);
+	switch (ndims)
 	{
-		this_point = getPoint2d_cp(in, ipn);
-		if ( ipn < in->npoints-minpoints+1 || opn >= minpoints ) /* need extra points to hit minponts */
+		case 2:
 		{
-			if (
-				(tolerance == 0 && memcmp(getPoint_internal(in, ipn-1), getPoint_internal(in, ipn), ptsize) == 0) || /* exact dupe */
-				(tolerance > 0.0 && distance2d_sqr_pt_pt(last_point, this_point) <= tolsq) /* within the removal tolerance */
-			) continue;
+			POINT2D *p_from = (POINT2D*)(getPoint_internal(pa, from));
+			POINT2D *p_to = (POINT2D*)(getPoint_internal(pa, to));
+			*p_to = *p_from;
+			return;
 		}
-
-		/*
-		 * The point is different (see above) from the previous,
-		 * so we add it to output
-		 */
-		memcpy(getPoint_internal(out, opn++), getPoint_internal(in, ipn), ptsize);
-		last_point = this_point;
-		LWDEBUGF(3, " Point %d differs from point %d. Out points: %d", ipn, ipn-1, opn);
+		case 3:
+		{
+			POINT3D *p_from = (POINT3D*)(getPoint_internal(pa, from));
+			POINT3D *p_to = (POINT3D*)(getPoint_internal(pa, to));
+			*p_to = *p_from;
+			return;
+		}
+		case 4:
+		{
+			POINT4D *p_from = (POINT4D*)(getPoint_internal(pa, from));
+			POINT4D *p_to = (POINT4D*)(getPoint_internal(pa, to));
+			*p_to = *p_from;
+			return;
+		}
+		default:
+		{
+			lwerror("%s: unsupported number of dimensions - %d", __func__, ndims);
+			return;
+		}
 	}
-	/* Keep the last point */
-	if ( memcmp(last_point, getPoint_internal(in, ipn-1), ptsize) != 0 )
-	{
-		memcpy(getPoint_internal(out, opn-1), getPoint_internal(in, ipn-1), ptsize);
-	}
-
-	LWDEBUGF(3, " in:%d out:%d", out->npoints, opn);
-	out->npoints = opn;
-
-	return out;
+	return;
 }
-
-POINTARRAY *
-ptarray_remove_repeated_points(const POINTARRAY *in, double tolerance)
-{
-	return ptarray_remove_repeated_points_minpoints(in, tolerance, 2);
-}
-
 
 void
-ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int min_points)
+ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, uint32_t min_points)
 {
-	int i;
+	uint32_t i;
 	double tolsq = tolerance * tolerance;
 	const POINT2D *last = NULL;
 	const POINT2D *pt;
-	int n_points = pa->npoints;
-	int n_points_out = 1;
+	uint32_t n_points = pa->npoints;
+	uint32_t n_points_out = 1;
+	size_t pt_size = ptarray_point_size(pa);
+
 	double dsq = FLT_MAX;
 
 	/* No-op on short inputs */
@@ -1529,7 +1490,7 @@ ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int mi
 		pt = getPoint2d_cp(pa, i);
 
 		/* Don't drop points if we are running short of points */
-		if (n_points - i > min_points - n_points_out)
+		if (n_points + n_points_out > min_points + i)
 		{
 			if (tolerance > 0.0)
 			{
@@ -1544,7 +1505,7 @@ ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int mi
 			else
 			{
 				/* At tolerance zero, only skip exact dupes */
-				if (memcmp((char*)pt, (char*)last, ptarray_point_size(pa)) == 0)
+				if (memcmp((char*)pt, (char*)last, pt_size) == 0)
 					continue;
 			}
 
@@ -1565,6 +1526,27 @@ ptarray_remove_repeated_points_in_place(POINTARRAY *pa, double tolerance, int mi
 	/* Adjust array length */
 	pa->npoints = n_points_out;
 	return;
+}
+
+/*
+ * Returns a POINTARRAY with consecutive equal points
+ * removed. Equality test on all dimensions of input.
+ *
+ * Always returns a newly allocated object.
+ *
+ */
+POINTARRAY *
+ptarray_remove_repeated_points_minpoints(const POINTARRAY *in, double tolerance, int minpoints)
+{
+	POINTARRAY *out = ptarray_clone_deep(in);
+	ptarray_remove_repeated_points_in_place(out, tolerance, minpoints);
+	return out;
+}
+
+POINTARRAY *
+ptarray_remove_repeated_points(const POINTARRAY *in, double tolerance)
+{
+	return ptarray_remove_repeated_points_minpoints(in, tolerance, 2);
 }
 
 
