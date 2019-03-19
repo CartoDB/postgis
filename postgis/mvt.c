@@ -22,13 +22,14 @@
  *
  **********************************************************************/
 
+#include <string.h>
+
 #include "mvt.h"
+#include "lwgeom_geos.h"
+#include "pgsql_compat.h"
 
 #ifdef HAVE_LIBPROTOBUF
-
-#if POSTGIS_PGSQL_VERSION >= 94
 #include "utils/jsonb.h"
-#endif
 
 #if POSTGIS_PGSQL_VERSION < 110
 /* See trac ticket #3867 */
@@ -39,55 +40,64 @@
 
 #define FEATURES_CAPACITY_INITIAL 50
 
-enum mvt_cmd_id {
+enum mvt_cmd_id
+{
 	CMD_MOVE_TO = 1,
 	CMD_LINE_TO = 2,
 	CMD_CLOSE_PATH = 7
 };
 
-enum mvt_type {
+enum mvt_type
+{
 	MVT_POINT = 1,
 	MVT_LINE = 2,
 	MVT_RING = 3
 };
 
-struct mvt_kv_key {
+struct mvt_kv_key
+{
 	char *name;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_string_value {
+struct mvt_kv_string_value
+{
 	char *string_value;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_float_value {
+struct mvt_kv_float_value
+{
 	float float_value;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_double_value {
+struct mvt_kv_double_value
+{
 	double double_value;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_uint_value {
+struct mvt_kv_uint_value
+{
 	uint64_t uint_value;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_sint_value {
+struct mvt_kv_sint_value
+{
 	int64_t sint_value;
 	uint32_t id;
 	UT_hash_handle hh;
 };
 
-struct mvt_kv_bool_value {
+struct mvt_kv_bool_value
+{
 	protobuf_c_boolean bool_value;
 	uint32_t id;
 	UT_hash_handle hh;
@@ -103,23 +113,25 @@ static inline uint32_t p_int(int32_t value)
 	return (value << 1) ^ (value >> 31);
 }
 
-static uint32_t encode_ptarray(mvt_agg_context *ctx, enum mvt_type type,
-			       POINTARRAY *pa, uint32_t *buffer,
+static uint32_t encode_ptarray(__attribute__((__unused__)) mvt_agg_context *ctx,
+			       enum mvt_type type, POINTARRAY *pa, uint32_t *buffer,
 			       int32_t *px, int32_t *py)
 {
 	uint32_t offset = 0;
 	uint32_t i, c = 0;
 	int32_t dx, dy, x, y;
+	const POINT2D *p;
 
 	/* loop points and add to buffer */
-	for (i = 0; i < pa->npoints; i++) {
+	for (i = 0; i < pa->npoints; i++)
+	{
 		/* move offset for command */
 		if (i == 0 || (i == 1 && type > MVT_POINT))
 			offset++;
 		/* skip closing point for rings */
 		if (type == MVT_RING && i == pa->npoints - 1)
 			break;
-		const POINT2D *p = getPoint2d_cp(pa, i);
+		p = getPoint2d_cp(pa, i);
 		x = p->x;
 		y = p->y;
 		dx = x - *px;
@@ -132,10 +144,13 @@ static uint32_t encode_ptarray(mvt_agg_context *ctx, enum mvt_type type,
 	}
 
 	/* determine initial move and eventual line command */
-	if (type == MVT_POINT) {
+	if (type == MVT_POINT)
+	{
 		/* point or multipoint, use actual number of point count */
 		buffer[0] = c_int(CMD_MOVE_TO, c);
-	} else {
+	}
+	else
+	{
 		/* line or polygon, assume count 1 */
 		buffer[0] = c_int(CMD_MOVE_TO, 1);
 		/* line command with move point subtracted from count */
@@ -254,7 +269,8 @@ static void encode_geometry(mvt_agg_context *ctx, LWGEOM *lwgeom)
 {
 	int type = lwgeom->type;
 
-	switch (type) {
+	switch (type)
+	{
 	case POINTTYPE:
 		return encode_point(ctx, (LWPOINT*)lwgeom);
 	case LINETYPE:
@@ -285,7 +301,7 @@ static uint32_t get_key_index_with_size(mvt_agg_context *ctx, const char *name, 
 	struct mvt_kv_key *kv;
 	HASH_FIND(hh, ctx->keys_hash, name, size, kv);
 	if (!kv)
-		return -1;
+		return UINT32_MAX;
 	return kv->id;
 }
 
@@ -317,22 +333,16 @@ static void parse_column_keys(mvt_agg_context *ctx)
 
 	for (i = 0; i < natts; i++)
 	{
-#if POSTGIS_PGSQL_VERSION < 110
-		Oid typoid = getBaseType(ctx->column_cache.tupdesc->attrs[i]->atttypid);
-		char *tkey = ctx->column_cache.tupdesc->attrs[i]->attname.data;
-#else
-		Oid typoid = getBaseType(ctx->column_cache.tupdesc->attrs[i].atttypid);
-		char *tkey = ctx->column_cache.tupdesc->attrs[i].attname.data;
-#endif
+		Oid typoid = getBaseType(TupleDescAttr(ctx->column_cache.tupdesc, i)->atttypid);
+		char *tkey = TupleDescAttr(ctx->column_cache.tupdesc, i)->attname.data;
 
 		ctx->column_cache.column_oid[i] = typoid;
-#if POSTGIS_PGSQL_VERSION >= 94
+
 		if (typoid == JSONBOID)
 		{
 			ctx->column_cache.column_keys_index[i] = UINT32_MAX;
 			continue;
 		}
-#endif
 
 		if (ctx->geom_name == NULL)
 		{
@@ -397,11 +407,14 @@ static VectorTile__Tile__Value *create_value()
 
 static void encode_values(mvt_agg_context *ctx)
 {
-	POSTGIS_DEBUG(2, "encode_values called");
 	VectorTile__Tile__Value **values;
-	values = palloc(ctx->values_hash_i * sizeof(*values));
 	struct mvt_kv_string_value *kv;
-	for (kv = ctx->string_values_hash; kv != NULL; kv=kv->hh.next) {
+
+	POSTGIS_DEBUG(2, "encode_values called");
+
+	values = palloc(ctx->values_hash_i * sizeof(*values));
+	for (kv = ctx->string_values_hash; kv != NULL; kv=kv->hh.next)
+	{
 		VectorTile__Tile__Value *value = create_value();
 		value->string_value = kv->string_value;
 		values[kv->id] = value;
@@ -440,29 +453,35 @@ static void encode_values(mvt_agg_context *ctx)
 #define MVT_PARSE_VALUE(value, kvtype, hash, valuefield, size) \
 { \
 	POSTGIS_DEBUG(2, "MVT_PARSE_VALUE called"); \
-	struct kvtype *kv; \
-	HASH_FIND(hh, ctx->hash, &value, size, kv); \
-	if (!kv) { \
-		POSTGIS_DEBUG(4, "MVT_PARSE_VALUE value not found"); \
-		kv = palloc(sizeof(*kv)); \
-		POSTGIS_DEBUGF(4, "MVT_PARSE_VALUE new hash key: %d", \
-			ctx->values_hash_i); \
-		kv->id = ctx->values_hash_i++; \
-		kv->valuefield = value; \
-		HASH_ADD(hh, ctx->hash, valuefield, size, kv); \
+	{ \
+		struct kvtype *kv; \
+		HASH_FIND(hh, ctx->hash, &value, size, kv); \
+		if (!kv) \
+		{ \
+			POSTGIS_DEBUG(4, "MVT_PARSE_VALUE value not found"); \
+			kv = palloc(sizeof(*kv)); \
+			POSTGIS_DEBUGF(4, "MVT_PARSE_VALUE new hash key: %d", \
+				ctx->values_hash_i); \
+			kv->id = ctx->values_hash_i++; \
+			kv->valuefield = value; \
+			HASH_ADD(hh, ctx->hash, valuefield, size, kv); \
+		} \
+		tags[ctx->row_columns*2] = k; \
+		tags[ctx->row_columns*2+1] = kv->id; \
 	} \
-	tags[ctx->row_columns*2] = k; \
-	tags[ctx->row_columns*2+1] = kv->id; \
 }
 
 #define MVT_PARSE_INT_VALUE(value) \
 { \
-	if (value >= 0) { \
+	if (value >= 0) \
+	{ \
 		uint64_t cvalue = value; \
 		MVT_PARSE_VALUE(cvalue, mvt_kv_uint_value, \
 				uint_values_hash, uint_value, \
 				sizeof(uint64_t)) \
-	} else { \
+	} \
+	else \
+	{ \
 		int64_t cvalue = value; \
 		MVT_PARSE_VALUE(cvalue, mvt_kv_sint_value, \
 				sint_values_hash, sint_value, \
@@ -522,7 +541,6 @@ static void parse_datum_as_string(mvt_agg_context *ctx, Oid typoid,
 	add_value_as_string(ctx, value, tags, k);
 }
 
-#if POSTGIS_PGSQL_VERSION >= 94
 static uint32_t *parse_jsonb(mvt_agg_context *ctx, Jsonb *jb,
 	uint32_t *tags)
 {
@@ -584,7 +602,7 @@ static uint32_t *parse_jsonb(mvt_agg_context *ctx, Jsonb *jb,
 					PointerGetDatum(v.val.numeric)));
 				d = strtod(str, NULL);
 				l = strtol(str, NULL, 10);
-				if ((long) d != l)
+				if (FP_NEQUALS(d, (double)l))
 				{
 					MVT_PARSE_VALUE(d, mvt_kv_double_value, double_values_hash,
 						double_value, sizeof(double));
@@ -600,7 +618,7 @@ static uint32_t *parse_jsonb(mvt_agg_context *ctx, Jsonb *jb,
 
 	return tags;
 }
-#endif
+
 
 static void parse_values(mvt_agg_context *ctx)
 {
@@ -642,15 +660,10 @@ static void parse_values(mvt_agg_context *ctx)
 			continue;
 		}
 
-#if POSTGIS_PGSQL_VERSION < 110
-		key = cc.tupdesc->attrs[i]->attname.data;
-#else
-		key = cc.tupdesc->attrs[i].attname.data;
-#endif
+		key = TupleDescAttr(cc.tupdesc, i)->attname.data;
 		k = cc.column_keys_index[i];
 		typoid = cc.column_oid[i];
 
-#if POSTGIS_PGSQL_VERSION >= 94
 		if (k == UINT32_MAX && typoid != JSONBOID)
 			elog(ERROR, "parse_values: unexpectedly could not find parsed key name '%s'", key);
 		if (typoid == JSONBOID)
@@ -658,10 +671,6 @@ static void parse_values(mvt_agg_context *ctx)
 			tags = parse_jsonb(ctx, DatumGetJsonbP(datum), tags);
 			continue;
 		}
-#else
-		if (k == UINT32_MAX)
-			elog(ERROR, "parse_values: unexpectedly could not find parsed key name '%s'", key);
-#endif
 
 		switch (typoid)
 		{
@@ -693,6 +702,7 @@ static void parse_values(mvt_agg_context *ctx)
 			parse_datum_as_string(ctx, typoid, datum, tags, k);
 			break;
 		}
+
 		ctx->row_columns++;
 	}
 
@@ -702,32 +712,6 @@ static void parse_values(mvt_agg_context *ctx)
 
 	POSTGIS_DEBUGF(3, "parse_values n_tags %zd", ctx->feature->n_tags);
 }
-
-static int max_type(LWCOLLECTION *lwcoll)
-{
-	int i, max = POINTTYPE;
-	for (i = 0; i < lwcoll->ngeoms; i++) {
-		uint8_t type = lwcoll->geoms[i]->type;
-		if (type == POLYGONTYPE || type == MULTIPOLYGONTYPE)
-			return POLYGONTYPE;
-		else if (type == LINETYPE || type == MULTILINETYPE)
-			max = LINETYPE;
-	}
-	return max;
-}
-
-
-static void
-lwgeom_to_basic_type(LWGEOM *geom, uint8 original_type)
-{
-	if (lwgeom_get_type(geom) == COLLECTIONTYPE)
-	{
-		LWCOLLECTION *g = (LWCOLLECTION*)geom;
-		LWCOLLECTION *gc = lwcollection_extract(g, original_type);
-		*g = *gc;
-	}
-}
-
 
 /* For a given geometry, look for the highest dimensional basic type, that is,
  * point, line or polygon */
@@ -763,148 +747,310 @@ lwgeom_get_basic_type(LWGEOM *geom)
 
 
 /**
- * Alternate implementation that uses in-place geometry transformations
- * and skips validity testing for polygons.
+ * In place process a collection to find a concrete geometry
+ * object and expose that as the actual object. Will some
+ * geom be lost? Sure, but your MVT renderer couldn't
+ * draw it anyways.
  */
-LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buffer, bool clip_geom)
+static inline LWGEOM *
+lwgeom_to_basic_type(LWGEOM *geom, uint8 original_type)
 {
-	AFFINE affine;
-	gridspec grid;
-	double width = gbox->xmax - gbox->xmin;
-	double height = gbox->ymax - gbox->ymin;
-	double resx, resy, res, fx, fy;
-	int preserve_collapsed = LW_TRUE;
-	const uint8_t basic_type = lwgeom_get_basic_type(lwgeom);
-	POSTGIS_DEBUG(2, "mvt_geom called");
-
-	/* Short circuit out on EMPTY */
-	if (lwgeom_is_empty(lwgeom))
-		return NULL;
-
-	if (width == 0 || height == 0)
-		elog(ERROR, "mvt_geom: bounds width or height cannot be 0");
-
-	if (extent == 0)
-		elog(ERROR, "mvt_geom: extent cannot be 0");
-
-	resx = width / extent;
-	resy = height / extent;
-	res = (resx < resy ? resx : resy)/2;
-	fx = extent / width;
-	fy = -(extent / height);
-
-	if (FLAGS_GET_BBOX(lwgeom->flags) && lwgeom->bbox &&
-		(lwgeom->type == LINETYPE || lwgeom->type == MULTILINETYPE ||
-		lwgeom->type == POLYGONTYPE || lwgeom->type == MULTIPOLYGONTYPE))
+	LWGEOM *geom_out = geom;
+	if (lwgeom_get_type(geom) == COLLECTIONTYPE)
 	{
-		// Shortcut to drop geometries smaller than the resolution
-		double bbox_width = lwgeom->bbox->xmax - lwgeom->bbox->xmin;
-		double bbox_height = lwgeom->bbox->ymax - lwgeom->bbox->ymin;
-		if (bbox_height * bbox_height + bbox_width * bbox_width < res * res)
-			return NULL;
+		LWCOLLECTION *g = (LWCOLLECTION*)geom;
+		geom_out = (LWGEOM *)lwcollection_extract(g, original_type);
 	}
 
-	/* Remove all non-essential points (under the output resolution) */
-	lwgeom_remove_repeated_points_in_place(lwgeom, res);
-	lwgeom_simplify_in_place(lwgeom, res, preserve_collapsed);
+	/* If a collection only contains 1 geometry return than instead */
+	if (lwgeom_is_collection(geom_out))
+	{
+		LWCOLLECTION *g = (LWCOLLECTION *)geom_out;
+		if (g->ngeoms == 1)
+		{
+			geom_out = g->geoms[0];
+		}
+	}
 
-	/* If geometry has disappeared, you're done */
-	if (lwgeom_is_empty(lwgeom))
+	geom_out->srid = geom->srid;
+	return geom_out;
+}
+
+static LWGEOM *
+mvt_unsafe_clip_by_box(LWGEOM *lwg_in, GBOX *clip_box)
+{
+	LWGEOM *geom_clipped;
+	GBOX geom_box;
+
+	gbox_init(&geom_box);
+	FLAGS_SET_GEODETIC(geom_box.flags, 0);
+	lwgeom_calculate_gbox(lwg_in, &geom_box);
+
+	if (!gbox_overlaps_2d(&geom_box, clip_box))
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
 		return NULL;
+	}
+
+	if (gbox_contains_2d(clip_box, &geom_box))
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: geometry contained fully inside the box");
+		return lwg_in;
+	}
+
+	geom_clipped = lwgeom_clip_by_rect(lwg_in, clip_box->xmin, clip_box->ymin, clip_box->xmax, clip_box->ymax);
+	if (!geom_clipped || lwgeom_is_empty(geom_clipped))
+		return NULL;
+	return geom_clipped;
+}
+
+/**
+ * Clips an input geometry using GEOSIntersection
+ * As you can get invalid output of invalid input, it tries to detect
+ * if something has gone wrong by checking the bounding box of the input
+ * and the output. If the output isn't contained in the input geometry and
+ * *retry* is true, it cleans the input and retries, else it returns NULL
+ */
+static LWGEOM *
+mvt_safe_clip_polygon_by_box(LWGEOM *lwg_in, GBOX *clip_box)
+{
+	LWGEOM *geom_clipped, *envelope;
+	GBOX geom_box;
+	GEOSGeometry *geos_input, *geos_box, *geos_result;
+
+	gbox_init(&geom_box);
+	FLAGS_SET_GEODETIC(geom_box.flags, 0);
+	lwgeom_calculate_gbox(lwg_in, &geom_box);
+
+	if (!gbox_overlaps_2d(&geom_box, clip_box))
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
+		return NULL;
+	}
+
+	if (gbox_contains_2d(clip_box, &geom_box))
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: geometry contained fully inside the box");
+		return lwg_in;
+	}
+
+	initGEOS(lwnotice, lwgeom_geos_error);
+	if (!(geos_input = LWGEOM2GEOS(lwg_in, 1)))
+		return NULL;
+
+	envelope = (LWGEOM *)lwpoly_construct_envelope(
+	    lwg_in->srid, clip_box->xmin, clip_box->ymin, clip_box->xmax, clip_box->ymax);
+	geos_box = LWGEOM2GEOS(envelope, 1);
+	lwgeom_free(envelope);
+	if (!geos_box)
+	{
+		GEOSGeom_destroy(geos_input);
+		return NULL;
+	}
+
+	geos_result = GEOSIntersection(geos_input, geos_box);
+	if (!geos_result)
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: no geometry after intersection. Retrying after validation");
+		GEOSGeom_destroy(geos_input);
+		lwg_in = lwgeom_make_valid(lwg_in);
+		if (!(geos_input = LWGEOM2GEOS(lwg_in, 1)))
+		{
+			GEOSGeom_destroy(geos_box);
+			return NULL;
+		}
+		geos_result = GEOSIntersection(geos_input, geos_box);
+		if (!geos_result)
+		{
+			GEOSGeom_destroy(geos_box);
+			GEOSGeom_destroy(geos_input);
+			return NULL;
+		}
+	}
+
+	GEOSSetSRID(geos_result, lwg_in->srid);
+	geom_clipped = GEOS2LWGEOM(geos_result, 0);
+
+	GEOSGeom_destroy(geos_box);
+	GEOSGeom_destroy(geos_input);
+	GEOSGeom_destroy(geos_result);
+
+	if (!geom_clipped || lwgeom_is_empty(geom_clipped))
+	{
+		POSTGIS_DEBUG(3, "mvt_geom: no geometry after clipping");
+		return NULL;
+	}
+
+	return geom_clipped;
+}
+
+/**
+ * Clips the geometry using GEOSIntersection in a "safe way", cleaning the input
+ * if necessary and clipping MULTIPOLYGONs separately to reduce the impact
+ * of using invalid input in GEOS
+ */
+static LWGEOM *
+mvt_iterate_clip_by_box_geos(LWGEOM *lwgeom, GBOX *clip_gbox, uint8_t basic_type)
+{
+	if (basic_type != POLYGONTYPE)
+	{
+		return mvt_unsafe_clip_by_box(lwgeom, clip_gbox);
+	}
+
+	if (lwgeom->type != MULTIPOLYGONTYPE || ((LWMPOLY *)lwgeom)->ngeoms == 1)
+	{
+		return mvt_safe_clip_polygon_by_box(lwgeom, clip_gbox);
+	}
+	else
+	{
+		GBOX geom_box;
+		uint32_t i;
+		LWCOLLECTION *lwmg;
+		LWCOLLECTION *res;
+
+		gbox_init(&geom_box);
+		FLAGS_SET_GEODETIC(geom_box.flags, 0);
+		lwgeom_calculate_gbox(lwgeom, &geom_box);
+
+		lwmg = ((LWCOLLECTION *)lwgeom);
+		res = lwcollection_construct_empty(
+		    MULTIPOLYGONTYPE, lwgeom->srid, FLAGS_GET_Z(lwgeom->flags), FLAGS_GET_M(lwgeom->flags));
+		for (i = 0; i < lwmg->ngeoms; i++)
+		{
+			LWGEOM *clipped = mvt_safe_clip_polygon_by_box(lwcollection_getsubgeom(lwmg, i), clip_gbox);
+			if (clipped)
+			{
+				clipped = lwgeom_to_basic_type(clipped, POLYGONTYPE);
+				if (!lwgeom_is_empty(clipped) &&
+				    (clipped->type == POLYGONTYPE || clipped->type == MULTIPOLYGONTYPE))
+				{
+					if (!lwgeom_is_collection(clipped))
+					{
+						lwcollection_add_lwgeom(res, clipped);
+					}
+					else
+					{
+						uint32_t j;
+						for (j = 0; j < ((LWCOLLECTION *)clipped)->ngeoms; j++)
+							lwcollection_add_lwgeom(
+							    res, lwcollection_getsubgeom((LWCOLLECTION *)clipped, j));
+					}
+				}
+			}
+		}
+		return lwcollection_as_lwgeom(res);
+	}
+}
+
+/**
+ * Given a geometry, it uses GEOS operations to make sure that it's valid according
+ * to the MVT spec and that all points are snapped into int coordinates
+ * It iterates several times if needed, if it fails, returns NULL
+ */
+static LWGEOM *
+mvt_grid_and_validate_geos(LWGEOM *ng, uint8_t basic_type)
+{
+	gridspec grid = {0, 0, 0, 0, 1, 1, 0, 0};
+	ng = lwgeom_to_basic_type(ng, basic_type);
+
+	if (basic_type != POLYGONTYPE)
+	{
+		/* Make sure there is no pending float values (clipping can do that) */
+		lwgeom_grid_in_place(ng, &grid);
+	}
+	else
+	{
+		/* For polygons we have to both snap to the integer grid and force validation.
+		 * The problem with this procedure is that snapping to the grid can create
+		 * an invalid geometry and making it valid can create float values; so
+		 * we iterate several times (up to 3) to generate a valid geom with int coordinates
+		 */
+		GEOSGeometry *geo;
+		uint32_t iterations = 0;
+		static const uint32_t max_iterations = 3;
+		bool valid = false;
+
+		/* Grid to int */
+		lwgeom_grid_in_place(ng, &grid);
+
+		initGEOS(lwgeom_geos_error, lwgeom_geos_error);
+		geo = LWGEOM2GEOS(ng, 0);
+		if (!geo)
+			return NULL;
+		valid = GEOSisValid(geo) == 1;
+
+		while (!valid && iterations < max_iterations)
+		{
+			GEOSGeometry *geo_valid = LWGEOM_GEOS_makeValid(geo);
+			GEOSGeom_destroy(geo);
+			if (!geo_valid)
+				return NULL;
+
+			ng = GEOS2LWGEOM(geo_valid, 0);
+			GEOSGeom_destroy(geo_valid);
+			if (!ng)
+				return NULL;
+
+			lwgeom_grid_in_place(ng, &grid);
+			ng = lwgeom_to_basic_type(ng, basic_type);
+			geo = LWGEOM2GEOS(ng, 0);
+			valid = GEOSisValid(geo) == 1;
+			iterations++;
+		}
+		GEOSGeom_destroy(geo);
+
+		if (!valid)
+		{
+			POSTGIS_DEBUG(1, "mvt_geom: Could not transform into a valid MVT geometry");
+			return NULL;
+		}
+
+		/* In image coordinates CW actually comes out a CCW, so we reverse */
+		lwgeom_force_clockwise(ng);
+		lwgeom_reverse_in_place(ng);
+	}
+	return ng;
+}
+
+static LWGEOM *
+mvt_clip_and_validate_geos(LWGEOM *lwgeom, uint8_t basic_type, uint32_t extent, uint32_t buffer, bool clip_geom)
+{
+	LWGEOM *ng = lwgeom;
 
 	if (clip_geom)
 	{
-		// We need to add an extra half pixel to include the points that
-		// fall into the bbox only after the coordinate transformation
-		double buffer_map_xunits = nextafterf(res, 0.0) + resx * buffer;
 		GBOX bgbox;
-		const GBOX *lwgeom_gbox = lwgeom_get_bbox(lwgeom);
-		bgbox = *gbox;
-		gbox_expand(&bgbox, buffer_map_xunits);
-		if (!gbox_overlaps_2d(lwgeom_gbox, &bgbox))
+		gbox_init(&bgbox);
+		bgbox.xmax = bgbox.ymax = (double)extent + (double)buffer;
+		bgbox.xmin = bgbox.ymin = -(double)buffer;
+		FLAGS_SET_GEODETIC(bgbox.flags, 0);
+
+		ng = mvt_iterate_clip_by_box_geos(lwgeom, &bgbox, basic_type);
+		if (!ng || lwgeom_is_empty(ng))
 		{
-			POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
+			POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
 			return NULL;
 		}
-		if (!gbox_contains_2d(&bgbox, lwgeom_gbox))
-		{
-			double x0 = bgbox.xmin;
-			double y0 = bgbox.ymin;
-			double x1 = bgbox.xmax;
-			double y1 = bgbox.ymax;
-			const GBOX pre_clip_box = *lwgeom_get_bbox(lwgeom);
-			LWGEOM *clipped_geom = lwgeom_clip_by_rect(lwgeom, x0, y0, x1, y1);
-			if (clipped_geom == NULL || lwgeom_is_empty(clipped_geom))
-			{
-				POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
- 				return NULL;
-			}
-			/* For some polygons, the simplify step might have left them
-			 * as invalid, which can cause clipping to return the complementary
-			 * geometry of what it should */
-			if ((basic_type == POLYGONTYPE) &&
-			    !gbox_contains_2d(&pre_clip_box, lwgeom_get_bbox(clipped_geom)))
-			{
-				/* Other options would be to fix the geometry and
-				 * retry or to calculate the difference between the
-				 * 2 boxes */
-				POSTGIS_DEBUG(3, "mvt_geom: Invalid geometry after clipping");
-				lwgeom_free(clipped_geom);
-				return NULL;
-			}
-			lwgeom = clipped_geom;
-		}
 	}
 
-	/* transform to tile coordinate space */
-	memset(&affine, 0, sizeof(affine));
-	affine.afac = fx;
-	affine.efac = fy;
-	affine.ifac = 1;
-	affine.xoff = -gbox->xmin * fx;
-	affine.yoff = -gbox->ymax * fy;
-	lwgeom_affine(lwgeom, &affine);
+	ng = mvt_grid_and_validate_geos(ng, basic_type);
 
-	/* snap to integer precision, removing duplicate points */
-	memset(&grid, 0, sizeof(gridspec));
-	grid.ipx = 0;
-	grid.ipy = 0;
-	grid.xsize = 1;
-	grid.ysize = 1;
-	lwgeom_grid_in_place(lwgeom, &grid);
-
-	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
-		return NULL;
-
-	if (basic_type == POLYGONTYPE)
-	{
-		/* Force validation as per MVT spec */
-		lwgeom = lwgeom_make_valid(lwgeom);
-
-		/* In image coordinates CW actually comes out a CCW, so we reverse */
-		lwgeom_force_clockwise(lwgeom);
-		lwgeom_reverse_in_place(lwgeom);
-	}
-
-	/* if geometry collection extract highest dimensional geometry type */
-	if (lwgeom->type == COLLECTIONTYPE)
-		lwgeom_to_basic_type(lwgeom, basic_type);
-
-	if (basic_type != lwgeom_get_basic_type(lwgeom))
+	/* Make sure we return the expected type */
+	if (basic_type != lwgeom_get_basic_type(ng))
 	{
 		/* Drop type changes to play nice with MVT renderers */
-		POSTGIS_DEBUG(3, "mvt_geom: Dropping geometry after type change");
+		POSTGIS_DEBUG(1, "mvt_geom: Dropping geometry after type change");
 		return NULL;
 	}
 
-	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
-		return NULL;
-
-	return lwgeom;
+	return ng;
 }
 
-
-
+static LWGEOM *
+mvt_clip_and_validate(LWGEOM *lwgeom, uint8_t basic_type, uint32_t extent, uint32_t buffer, bool clip_geom)
+{
+	return mvt_clip_and_validate_geos(lwgeom, basic_type, extent, buffer, clip_geom);
+}
 
 /**
  * Transform a geometry into vector tile coordinate space.
@@ -914,79 +1060,40 @@ LWGEOM *mvt_geom_fast(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_
  *
  * NOTE: modifies in place if possible (not currently possible for polygons)
  */
-LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buffer, bool clip_geom)
+LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buffer,
+	bool clip_geom)
 {
-	AFFINE affine;
-	gridspec grid;
+	AFFINE affine = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	gridspec grid = {0, 0, 0, 0, 1, 1, 0, 0};
 	double width = gbox->xmax - gbox->xmin;
 	double height = gbox->ymax - gbox->ymin;
-	double resx = width / extent;
-	double fx = extent / width;
-	double fy = -(extent / height);
-	double buffer_map_xunits = resx * buffer;
-	const GBOX *lwgeom_gbox;
+	double resx, resy, res, fx, fy;
+	const uint8_t basic_type = lwgeom_get_basic_type(lwgeom);
+	int preserve_collapsed = LW_FALSE;
 	POSTGIS_DEBUG(2, "mvt_geom called");
+
+	/* Simplify it as soon as possible */
+	lwgeom = lwgeom_to_basic_type(lwgeom, basic_type);
 
 	/* Short circuit out on EMPTY */
 	if (lwgeom_is_empty(lwgeom))
 		return NULL;
 
-	lwgeom_gbox = lwgeom_get_bbox(lwgeom);
-	if (width == 0 || height == 0)
-		elog(ERROR, "mvt_geom: bounds width or height cannot be 0");
+	resx = width / extent;
+	resy = height / extent;
+	res = (resx < resy ? resx : resy) / 2;
+	fx = extent / width;
+	fy = -(extent / height);
 
-	if (extent == 0)
-		elog(ERROR, "mvt_geom: extent cannot be 0");
+	/* Remove all non-essential points (under the output resolution) */
+	lwgeom_remove_repeated_points_in_place(lwgeom, res);
+	lwgeom_simplify_in_place(lwgeom, res, preserve_collapsed);
 
-	if (clip_geom) {
-		GBOX *bgbox = gbox_copy(gbox);
-		gbox_expand(bgbox, buffer_map_xunits);
-		if (!gbox_overlaps_2d(lwgeom_gbox, bgbox)) {
-			POSTGIS_DEBUG(3, "mvt_geom: geometry outside clip box");
-			return NULL;
-		}
-		if (!gbox_contains_2d(bgbox, lwgeom_gbox)) {
-			double x0 = bgbox->xmin;
-			double y0 = bgbox->ymin;
-			double x1 = bgbox->xmax;
-			double y1 = bgbox->ymax;
-#if POSTGIS_GEOS_VERSION < 35
-			LWPOLY *lwenv = lwpoly_construct_envelope(0, x0, y0, x1, y1);
-			lwgeom = lwgeom_intersection(lwgeom, lwpoly_as_lwgeom(lwenv));
-			lwpoly_free(lwenv);
-#else
-			const GBOX pre_clip_box = *lwgeom_get_bbox(lwgeom);
-			LWGEOM *clipped_geom = lwgeom_clip_by_rect(lwgeom, x0, y0, x1, y1);
-			if (clipped_geom == NULL || lwgeom_is_empty(clipped_geom))
-			{
-				POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
-				return NULL;					return NULL;
-			}
-			/* For some polygons, the simplify step might have left them
-			 * as invalid, which can cause clipping to return the complementary
-			 * geometry of what it should */
-			if ((lwgeom->type == POLYGONTYPE ||
-				lwgeom->type == MULTIPOLYGONTYPE ||
-				lwgeom->type == COLLECTIONTYPE) &&
-			    !gbox_contains_2d(&pre_clip_box, lwgeom_get_bbox(clipped_geom)))
-			{
-				/* Other options would be to fix the geometry and
-				 * retry or to calculate the difference between the
-				 * 2 boxes */
-				POSTGIS_DEBUG(3, "mvt_geom: Invalid geometry after clipping");
-				lwgeom_free(clipped_geom);
-				return NULL;
-			}
-			lwgeom = clipped_geom;
-#endif
-			POSTGIS_DEBUG(3, "mvt_geom: no geometry after clip");
-			if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
-				return NULL;
-		}
-	}
+	/* If geometry has disappeared, you're done */
+	if (lwgeom_is_empty(lwgeom))
+		return NULL;
 
 	/* transform to tile coordinate space */
-	memset(&affine, 0, sizeof(affine));
 	affine.afac = fx;
 	affine.efac = fy;
 	affine.ifac = 1;
@@ -994,65 +1101,14 @@ LWGEOM *mvt_geom(LWGEOM *lwgeom, const GBOX *gbox, uint32_t extent, uint32_t buf
 	affine.yoff = -gbox->ymax * fy;
 	lwgeom_affine(lwgeom, &affine);
 
-	/* snap to integer precision, removing duplicate points */
-	memset(&grid, 0, sizeof(gridspec));
-	grid.ipx = 0;
-	grid.ipy = 0;
-	grid.xsize = 1;
-	grid.ysize = 1;
+	/* Snap to integer precision, removing duplicate points and spikes */
 	lwgeom_grid_in_place(lwgeom, &grid);
 
-	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
+	if (!lwgeom || lwgeom_is_empty(lwgeom))
 		return NULL;
 
-	/* if polygon(s) make valid and force clockwise as per MVT spec */
-	if (lwgeom->type == POLYGONTYPE ||
-	    lwgeom->type == MULTIPOLYGONTYPE)
-	{
-		lwgeom = lwgeom_make_valid(lwgeom);
-
-		/* Drop type changes to play nice with MVT renderers */
-		if (!(lwgeom->type == POLYGONTYPE ||
-		      lwgeom->type == MULTIPOLYGONTYPE ||
-		      lwgeom->type == COLLECTIONTYPE))
-		{
-			lwgeom_free(lwgeom);
-			return NULL;
-		}
-
-		/* Because we are in image coordinates, we need to go to CCW in */
-		/* order to get a CW output in image space */
-		lwgeom_force_clockwise(lwgeom);
-		lwgeom_reverse(lwgeom);
-	}
-
-	/* if geometry collection extract highest dimensional geometry type */
-	if (lwgeom->type == COLLECTIONTYPE) {
-		LWCOLLECTION *lwcoll = lwgeom_as_lwcollection(lwgeom);
-		lwgeom = lwcollection_as_lwgeom(lwcollection_extract(lwcoll, max_type(lwcoll)));
-		lwgeom = lwgeom_homogenize(lwgeom);
-		/* if polygon(s) make valid and force clockwise as per MVT spec */
-		if (lwgeom->type == POLYGONTYPE ||
-		    lwgeom->type == MULTIPOLYGONTYPE)
-		{
-			lwgeom = lwgeom_make_valid(lwgeom);
-
-			/* Drop type changes to play nice with MVT renderers */
-			if (!(lwgeom->type == POLYGONTYPE ||
-				lwgeom->type == MULTIPOLYGONTYPE))
-			{
-				lwgeom_free(lwgeom);
-				return NULL;
-			}
-
-			/* Because we are in image coordinates, we need to go to CCW in */
-			/* order to get a CW output in image space */
-			lwgeom_force_clockwise(lwgeom);
-			lwgeom_reverse(lwgeom);
-		}
-	}
-
-	if (lwgeom == NULL || lwgeom_is_empty(lwgeom))
+	lwgeom = mvt_clip_and_validate(lwgeom, basic_type, extent, buffer, clip_geom);
+	if (!lwgeom || lwgeom_is_empty(lwgeom))
 		return NULL;
 
 	return lwgeom;
@@ -1103,7 +1159,7 @@ void mvt_agg_init_context(mvt_agg_context *ctx)
  * Expands features array if needed by a factor of 2.
  * Allocates a new feature, increment feature counter and
  * encode geometry and properties into it.
- */
+ */
 void mvt_agg_transfn(mvt_agg_context *ctx)
 {
 	bool isnull = false;
@@ -1115,7 +1171,8 @@ void mvt_agg_transfn(mvt_agg_context *ctx)
 /*	VectorTile__Tile__Feature **features = layer->features; */
 	POSTGIS_DEBUG(2, "mvt_agg_transfn called");
 
-	if (layer->n_features >= ctx->features_capacity) {
+	if (layer->n_features >= ctx->features_capacity)
+	{
 		size_t new_capacity = ctx->features_capacity * 2;
 		layer->features = repalloc(layer->features, new_capacity *
 			sizeof(*layer->features));
@@ -1155,11 +1212,12 @@ void mvt_agg_transfn(mvt_agg_context *ctx)
 
 static VectorTile__Tile * mvt_ctx_to_tile(mvt_agg_context *ctx)
 {
+	int n_layers = 1;
+	VectorTile__Tile *tile;
 	encode_keys(ctx);
 	encode_values(ctx);
 
-	int n_layers = 1;
-	VectorTile__Tile *tile = palloc(sizeof(VectorTile__Tile));
+	tile = palloc(sizeof(VectorTile__Tile));
 	vector_tile__tile__init(tile);
 	tile->layers = palloc(sizeof(VectorTile__Tile__Layer*) * n_layers);
 	tile->layers[0] = ctx->layer;
@@ -1173,6 +1231,8 @@ static bytea *mvt_ctx_to_bytea(mvt_agg_context *ctx)
 	/* We should only have a filled slow when all the work of building */
 	/* out the data is complete, so after a serialize/deserialize cycle */
 	/* or after a context combine */
+	size_t len;
+	bytea *ba;
 
 	if (!ctx->tile)
 	{
@@ -1188,8 +1248,8 @@ static bytea *mvt_ctx_to_bytea(mvt_agg_context *ctx)
 	}
 
 	/* Serialize the Tile */
-	size_t len = VARHDRSZ + vector_tile__tile__get_packed_size(ctx->tile);
-	bytea *ba = palloc(len);
+	len = VARHDRSZ + vector_tile__tile__get_packed_size(ctx->tile);
+	ba = palloc(len);
 	vector_tile__tile__pack(ctx->tile, (uint8_t*)VARDATA(ba));
 	SET_VARSIZE(ba, len);
 	return ba;
@@ -1201,25 +1261,26 @@ bytea * mvt_ctx_serialize(mvt_agg_context *ctx)
 	return mvt_ctx_to_bytea(ctx);
 }
 
-static void * mvt_allocator(void *data, size_t size)
+static void * mvt_allocator(__attribute__((__unused__)) void *data, size_t size)
 {
 	return palloc(size);
 }
 
-static void mvt_deallocator(void *data, void *ptr)
+static void mvt_deallocator(__attribute__((__unused__)) void *data, void *ptr)
 {
 	return pfree(ptr);
 }
 
 mvt_agg_context * mvt_ctx_deserialize(const bytea *ba)
 {
-	ProtobufCAllocator allocator = {
+	ProtobufCAllocator allocator =
+	{
 		mvt_allocator,
 		mvt_deallocator,
 		NULL
 	};
 
-	size_t len = VARSIZE(ba) - VARHDRSZ;
+	size_t len = VARSIZE_ANY_EXHDR(ba);
 	VectorTile__Tile *tile = vector_tile__tile__unpack(&allocator, len, (uint8_t*)VARDATA(ba));
 	mvt_agg_context *ctx = palloc(sizeof(mvt_agg_context));
 	memset(ctx, 0, sizeof(mvt_agg_context));
@@ -1240,13 +1301,14 @@ tile_value_copy(const VectorTile__Tile__Value *value)
 static VectorTile__Tile__Feature *
 tile_feature_copy(const VectorTile__Tile__Feature *feature, int key_offset, int value_offset)
 {
-	int i;
+	uint32_t i;
+	VectorTile__Tile__Feature *nfeature;
 
 	/* Null in => Null out */
 	if (!feature) return NULL;
 
 	/* Init object */
-	VectorTile__Tile__Feature *nfeature = palloc(sizeof(VectorTile__Tile__Feature));
+	nfeature = palloc(sizeof(VectorTile__Tile__Feature));
 	vector_tile__tile__feature__init(nfeature);
 
 	/* Copy settings straight over */
@@ -1283,7 +1345,7 @@ tile_feature_copy(const VectorTile__Tile__Feature *feature, int key_offset, int 
 static VectorTile__Tile__Layer *
 vectortile_layer_combine(const VectorTile__Tile__Layer *layer1, const VectorTile__Tile__Layer *layer2)
 {
-	int i, j;
+	uint32_t i, j;
 	int key2_offset, value2_offset;
 	VectorTile__Tile__Layer *layer = palloc(sizeof(VectorTile__Tile__Layer));
 	vector_tile__tile__layer__init(layer);
@@ -1291,7 +1353,7 @@ vectortile_layer_combine(const VectorTile__Tile__Layer *layer1, const VectorTile
 	/* Take globals from layer1 */
 	layer->version = layer1->version;
 	layer->name = pstrdup(layer1->name);
-    layer->has_extent = layer1->has_extent;
+	layer->has_extent = layer1->has_extent;
 	layer->extent = layer1->extent;
 
 	/* Copy keys into new layer */
@@ -1332,7 +1394,8 @@ vectortile_layer_combine(const VectorTile__Tile__Layer *layer1, const VectorTile
 static VectorTile__Tile *
 vectortile_tile_combine(VectorTile__Tile *tile1, VectorTile__Tile *tile2)
 {
-	int i, j;
+	uint32_t i, j;
+	VectorTile__Tile *tile;
 
 	/* Hopelessly messing up memory ownership here */
 	if (tile1->n_layers == 0 && tile2->n_layers == 0)
@@ -1342,7 +1405,7 @@ vectortile_tile_combine(VectorTile__Tile *tile1, VectorTile__Tile *tile2)
 	else if (tile2->n_layers == 0)
 		return tile1;
 
-	VectorTile__Tile *tile = palloc(sizeof(VectorTile__Tile));
+	tile = palloc(sizeof(VectorTile__Tile));
 	vector_tile__tile__init(tile);
 	tile->layers = palloc(sizeof(void*));
 	tile->n_layers = 0;

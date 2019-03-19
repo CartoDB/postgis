@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.4.7.3+carto-1
+Release date: 2019-03-18
+
+Changes:
+
+- Continued from 2.4.7.1: MVT: Backport improvements to verify validity of output geometries.
+
+## 2.4.7.2+carto-1
+Release date: 2019-03-18
+
+Changes:
+
+- Continued from 2.4.7.1: MVT: Backport improvements to verify validity of output geometries.
+
 ## 2.4.7.1+carto-1
 
 **Release date**: 2019-03-13

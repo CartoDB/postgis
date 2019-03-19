@@ -282,6 +282,7 @@ double lwtriangle_area(const LWTRIANGLE *triangle);
 * it is not, return LW_FAILURE.
 */
 extern int gserialized_read_gbox_p(const GSERIALIZED *g, GBOX *gbox);
+int gserialized_peek_gbox_p(const GSERIALIZED *g, GBOX *gbox);
 
 /*
 * Length calculations
