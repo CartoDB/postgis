@@ -3069,14 +3069,14 @@ CREATE OR REPLACE FUNCTION ST_Simplify(geometry, float8)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME', 'LWGEOM_simplify2d'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	_COST_C_HIGH;
+	_COST_C_MED;
 
 -- Availability: 2.2.0
 CREATE OR REPLACE FUNCTION ST_Simplify(geometry, float8, boolean)
 	RETURNS geometry
 	AS 'MODULE_PATHNAME', 'LWGEOM_simplify2d'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	_COST_C_HIGH;
+	_COST_C_MED;
 
 -- Availability: 2.2.0
 CREATE OR REPLACE FUNCTION ST_SimplifyVW(geometry,  float8)
@@ -4038,7 +4038,7 @@ CREATE OR REPLACE FUNCTION _ST_Intersects(geom1 geometry, geom2 geometry)
 	RETURNS boolean
 	AS 'MODULE_PATHNAME','intersects'
 	LANGUAGE 'c' IMMUTABLE STRICT _PARALLEL
-	_COST_GEOS_MED;
+	_COST_GEOS_LOW;
 
 -- Availability: 1.2.2
 -- Inlines index magic

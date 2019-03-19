@@ -375,7 +375,7 @@ LWGEOM_GEOS_nodeLines(const GEOSGeometry* lines)
  * Will return NULL on error (expect error handler being called by then)
  *
  */
-static GEOSGeometry*
+GEOSGeometry*
 LWGEOM_GEOS_makeValidPolygon(const GEOSGeometry* gin)
 {
 	GEOSGeom gout;
@@ -785,6 +785,7 @@ LWGEOM_GEOS_makeValidMultiLine(const GEOSGeometry* gin)
 
 	return gout;
 }
+
 
 /*
  * We expect initGEOS being called already.

@@ -282,6 +282,7 @@ double lwtriangle_area(const LWTRIANGLE *triangle);
 * it is not, return LW_FAILURE.
 */
 extern int gserialized_read_gbox_p(const GSERIALIZED *g, GBOX *gbox);
+int gserialized_peek_gbox_p(const GSERIALIZED *g, GBOX *gbox);
 
 /*
 * Length calculations
@@ -419,8 +420,6 @@ void lwpoly_grid_in_place(LWPOLY *poly, const gridspec *grid);
 void lwline_grid_in_place(LWLINE *line, const gridspec *grid);
 void lwcircstring_grid_in_place(LWCIRCSTRING *line, const gridspec *grid);
 void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);
-void lwgeom_grid_mvt_in_place(LWGEOM *lwgeom);
-void ptarray_grid_mvt_in_place(POINTARRAY *pa, const gridspec *grid);
 
 /* IN PLACE FUNCTIONS */
 void ptarray_grid_in_place(POINTARRAY *pa, const gridspec *grid);
