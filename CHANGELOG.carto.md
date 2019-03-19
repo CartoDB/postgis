@@ -7,7 +7,6 @@
 Changes:
 - carto-package.json: Declare compatibility guaranteed only with PG 10.
 - Update from community branch (svn-2.4 2019-03-12 // 2.4.7), except MVT changes
-- MVT: Backport improvements to verify validity of output geometries.
 
 ## 2.4.4.6+carto-1
 
