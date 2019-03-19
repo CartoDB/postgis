@@ -6,6 +6,7 @@ Release date: 2019-03-18
 Changes:
 
 - Continued from 2.4.7.1: MVT: Backport improvements to verify validity of output geometries.
+- Backport `ST_Simplify` and `_ST_Intersects` cost changes.
 
 ## 2.4.7.2+carto-1
 Release date: 2019-03-18
