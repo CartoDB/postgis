@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.7.4+carto-1
+Release date: 2019-03-22
+
+Changes:
+
+- MVT Geos: Avoid NULL dereference when NULL is returned from validation
+
 ## 2.4.7.3+carto-1
 Release date: 2019-03-19
 
