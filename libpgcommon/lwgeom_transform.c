@@ -432,7 +432,7 @@ GetProjStringsSPI(int32_t srid)
 		}
 		else
 		{
-			elog(ERROR, "GetProj4StringSPI: Cannot find SRID (%d) in spatial_ref_sys", srid);
+			elog(ERROR, "Cannot find SRID (%d) in spatial_ref_sys", srid);
 		}
 	}
 
