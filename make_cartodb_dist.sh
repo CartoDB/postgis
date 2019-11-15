@@ -27,10 +27,10 @@ v_micro=`cat Version.config | perl -ne 'print if s/POSTGIS_MICRO_VERSION=(\d)/$1
 v_carto=`cat Version.config | perl -ne 'print if s/CARTODB_MICRO_VERSION=(\d)/$1/'`
 
 version="${v_major}.${v_minor}.${v_micro}.${v_carto}"
-tag=trunk
+tag=`git branch | grep \* | cut -d ' ' -f2`
 outdir="postgis-$version"
 package="postgis-$version.tar.gz"
-branch=svn-2.4-cartodb
+branch=`git branch | grep \* | cut -d ' ' -f2`
 
 # Define in environment if necessary to get postgis to configure,
 # which is only done to build comments.
