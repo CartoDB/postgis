@@ -1,3 +1,10 @@
+## 2.5.3.2+carto-1
+
+**Release date**: 2019-12-16
+
+Changes:
+- Merged community `stable-2.5` as of 2019-12-16: Backport fixes and adding a security notice.
+
 ## 2.5.3.1+carto-1
 
 **Release date**: 2019-11-11
