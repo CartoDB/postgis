@@ -2042,6 +2042,7 @@ Datum ST_TileEnvelope(PG_FUNCTION_ARGS)
 	   srid of the object is EPSG:3857. */
 	int32_t srid;
 	GBOX bbox;
+	LWGEOM *g = NULL;
 
 	POSTGIS_DEBUG(2, "ST_TileEnvelope called");
 
@@ -2050,9 +2051,17 @@ Datum ST_TileEnvelope(PG_FUNCTION_ARGS)
 	y = PG_GETARG_INT32(2);
 
 	bounds = PG_GETARG_GSERIALIZED_P(3);
-	if(gserialized_get_gbox_p(bounds, &bbox) != LW_SUCCESS)
-		elog(ERROR, "%s: Empty bounds", __func__);
-	srid = gserialized_get_srid(bounds);
+	/*
+	 * We deserialize the geometry and recalculate the bounding box here to get
+	 * 64b floating point precision. The serialized bbox has 32b float is not
+	 * precise enough with big numbers such as the ones used in the default
+	 * parameters, e.g: -20037508.3427892 is transformed into -20037510
+	 */
+	g = lwgeom_from_gserialized(bounds);
+	if (lwgeom_calculate_gbox(g, &bbox) != LW_SUCCESS)
+		elog(ERROR, "%s: Unable to compute bbox", __func__);
+	srid = g->srid;
+	lwgeom_free(g);
 
 	boundsWidth  = bbox.xmax - bbox.xmin;
 	boundsHeight = bbox.ymax - bbox.ymin;
@@ -2163,7 +2172,7 @@ Datum LWGEOM_addpoint(PG_FUNCTION_ARGS)
 	GSERIALIZED *pglwg1, *pglwg2, *result;
 	LWPOINT *point;
 	LWLINE *line, *linecopy;
-	int32 where = -1;
+	uint32_t uwhere = 0;
 
 	POSTGIS_DEBUGF(2, "%s called.", __func__);
 
@@ -2184,26 +2193,29 @@ Datum LWGEOM_addpoint(PG_FUNCTION_ARGS)
 
 	line = lwgeom_as_lwline(lwgeom_from_gserialized(pglwg1));
 
-	if (PG_NARGS() > 2)
+	if (PG_NARGS() <= 2)
 	{
-		where = PG_GETARG_INT32(2);
+		uwhere = line->points->npoints;
 	}
 	else
 	{
-		where = line->points->npoints;
-	}
-
-	if (where < 0 || where > (int32)line->points->npoints)
-	{
-		elog(ERROR, "Invalid offset");
-		PG_RETURN_NULL();
+		int32 where = PG_GETARG_INT32(2);
+		if (where == -1)
+		{
+			uwhere = line->points->npoints;
+		}
+		else if (where < 0 || where > (int32)line->points->npoints)
+		{
+			elog(ERROR, "Invalid offset");
+			PG_RETURN_NULL();
+		}
 	}
 
 	point = lwgeom_as_lwpoint(lwgeom_from_gserialized(pglwg2));
 	linecopy = lwgeom_as_lwline(lwgeom_clone_deep(lwline_as_lwgeom(line)));
 	lwline_free(line);
 
-	if (lwline_add_lwpoint(linecopy, point, (uint32_t)where) == LW_FAILURE)
+	if (lwline_add_lwpoint(linecopy, point, uwhere) == LW_FAILURE)
 	{
 		elog(ERROR, "Point insert failed");
 		PG_RETURN_NULL();
