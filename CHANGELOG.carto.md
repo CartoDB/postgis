@@ -1,6 +1,6 @@
 ## 3.0.0.1+carto-1
 
-**Release date**: 20XX-XX-XX
+**Release date**: 2020-01-10
 
 Changes:
 - Start from `stable-3.0` (https://github.com/postgis/postgis/commit/318bfa75b9968b95a3f958bb7199b5a25c72752d).
