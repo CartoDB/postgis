@@ -1,6 +1,14 @@
-## 3.0.0.1+carto-1
+## 3.0.1.2+carto-1
 
-**Release date**: 20XX-XX-XX
+**Release date**: 2020-01-15
+
+Changes:
+- Update from `stable-3.0` up to 2020-01-15 (https://github.com/postgis/postgis/commit/b73f67376145d96c9f5bb2c31bc407dd6e311746).
+
+
+## 3.0.1.1+carto-1
+
+**Release date**: 2020-01-10
 
 Changes:
 - Start from `stable-3.0` (https://github.com/postgis/postgis/commit/318bfa75b9968b95a3f958bb7199b5a25c72752d).
