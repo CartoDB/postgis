@@ -308,6 +308,16 @@ fi
 AC_SUBST([MATHML2_DTD])
 
 dnl ===========================================================================
+dnl Detect if pkg-config installed
+dnl ===========================================================================
+# check for pkg-config
+PKG_PROG_PKG_CONFIG
+if test -z "$PKG_CONFIG"; then
+   AC_MSG_WARN([Cannot find pkg-config, make sure it is installed in your PATH])
+fi
+
+
+dnl ===========================================================================
 dnl Detect CUnit if it is installed (used for unit testing)
 dnl
 dnl Note that we pass any specified CPPFLAGS and LDFLAGS into the Makefile
@@ -584,13 +594,31 @@ AC_ARG_WITH([xml2config],
 	[AS_HELP_STRING([--with-xml2config=FILE], [specify an alternative xml2-config file])],
 	[XML2CONFIG="$withval"], [XML2CONFIG=""])
 
+XML2_LDFLAGS=""
+XML2_CPPFLAGS=""
+
 if test "x$XML2CONFIG" = "x"; then
 	dnl XML2CONFIG was not specified, so search within the current path
 	AC_PATH_PROG([XML2CONFIG], [xml2-config])
 
-	dnl If we couldn't find xml2-config, display a warning
+	dnl If we couldn't find xml2-config, display a warning if pkg-config fails too
 	if test "x$XML2CONFIG" = "x"; then
-		AC_MSG_ERROR([could not find xml2-config from libxml2 within the current path. You may need to try re-running configure with a --with-xml2config parameter.])
+		if test ! -z "$PKG_CONFIG"; then
+			PKG_CHECK_MODULES([LIBXML2], [libxml-2.0], [
+				XML2_CPPFLAGS="$LIBXML2_CFLAGS"
+				XML2_LDFLAGS="$LIBXML2_LIBS"
+				POSTGIS_LIBXML2_VERSION=`$PKG_CONFIG libxml-2.0 --modversion`
+			], [])
+		else
+			AC_MSG_ERROR([could not find xml2-config from libxml2 within the current path. You may need to try re-running configure with a --with-xml2config parameter.])
+		fi
+	else
+		dnl Extract the linker and include flags
+		XML2_LDFLAGS=`$XML2CONFIG --libs`
+		XML2_CPPFLAGS=`$XML2CONFIG --cflags`
+
+		dnl Extract the version
+		POSTGIS_LIBXML2_VERSION=`$XML2CONFIG --version`
 	fi
 else
 	dnl XML2CONFIG was specified; display a message to the user
@@ -599,16 +627,18 @@ else
 	else
 		if test -f $XML2CONFIG; then
 			AC_MSG_RESULT([Using user-specified xml2-config file: $XML2CONFIG])
+
+			dnl Extract the linker and include flags
+			XML2_LDFLAGS=`$XML2CONFIG --libs`
+			XML2_CPPFLAGS=`$XML2CONFIG --cflags`
+
+			dnl Extract the version
+			POSTGIS_LIBXML2_VERSION=`$XML2CONFIG --version`
 		else
 			AC_MSG_ERROR([the user-specified xml2-config file $XML2CONFIG does not exist])
 		fi
 	fi
 fi
-
-
-dnl Extract the linker and include flags
-XML2_LDFLAGS=`$XML2CONFIG --libs`
-XML2_CPPFLAGS=`$XML2CONFIG --cflags`
 
 
 dnl
@@ -632,10 +662,6 @@ case $host_os in
         fi
         ;;
 esac
-
-
-dnl Extract the version
-POSTGIS_LIBXML2_VERSION=`$XML2CONFIG --version`
 
 dnl Check headers file
 CPPFLAGS_SAVE="$CPPFLAGS"
@@ -822,16 +848,6 @@ AC_SUBST([GETTEXT_LDFLAGS])
 
 LDFLAGS="$LDFLAGS_SAVE"
 CFLAGS="$CFLAGS_SAVE"
-
-
-dnl ===========================================================================
-dnl Detect if pkg-config installed
-dnl ===========================================================================
-# check for pkg-config
-PKG_PROG_PKG_CONFIG
-if test -z "$PKG_CONFIG"; then
-   AC_MSG_WARN([Cannot find pkg-config, make sure it is installed in your PATH])
-fi
 
 
 dnl ===========================================================================
@@ -1285,39 +1301,6 @@ if test "x$with_raster" != "xno"; then
 	AC_MSG_RESULT([RASTER: Raster support requested])
 
 	AC_CONFIG_HEADERS([raster/raster_config.h])
-
-	dnl
-	dnl Raster Version Information imported from raster/Version.config
-	dnl
-	POSTGIS_RASTER_MAJOR_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MAJOR_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
-	POSTGIS_RASTER_MINOR_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MINOR_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
-	POSTGIS_RASTER_MICRO_VERSION=`cat raster/Version.config | grep POSTGIS_RASTER_MICRO_VERSION | sed 's/[[^=]]*=\([[0-9]]\)/\1/g'`
-
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MAJOR_VERSION], ["$POSTGIS_RASTER_MAJOR_VERSION"], [PostGIS Raster major version])
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MINOR_VERSION], ["$POSTGIS_RASTER_MINOR_VERSION"], [PostGIS Raster minor version])
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_MICRO_VERSION], ["$POSTGIS_RASTER_MICRO_VERSION"], [PostGIS Raster micro version])
-
-	AC_SUBST([POSTGIS_RASTER_MAJOR_VERSION])
-	AC_SUBST([POSTGIS_RASTER_MINOR_VERSION])
-	AC_SUBST([POSTGIS_RASTER_MICRO_VERSION])
-
-	dnl ==============================
-	dnl Define raster version macros
-	dnl ==============================
-	POSTGIS_RASTER_VERSION="$POSTGIS_RASTER_MAJOR_VERSION.$POSTGIS_RASTER_MINOR_VERSION"
-	POSTGIS_RASTER_LIB_VERSION="$POSTGIS_RASTER_MAJOR_VERSION.$POSTGIS_RASTER_MINOR_VERSION.$POSTGIS_RASTER_MICRO_VERSION"
-	POSTGIS_RASTER_BUILD_DATE=`date ${SOURCE_DATE_EPOCH:+-d @$SOURCE_DATE_EPOCH} -u "+%Y-%m-%d %H:%M:%S"`
-	POSTGIS_RASTER_SCRIPTS_VERSION="$POSTGIS_RASTER_LIB_VERSION"
-
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_VERSION], ["$POSTGIS_RASTER_VERSION"], [PostGIS Raster version])
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_LIB_VERSION], ["$POSTGIS_RASTER_LIB_VERSION"], [PostGIS Raster library version])
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_BUILD_DATE], ["$POSTGIS_RASTER_BUILD_DATE"], [PostGIS Raster build date])
-	AC_DEFINE_UNQUOTED([POSTGIS_RASTER_SCRIPTS_VERSION], ["$POSTGIS_RASTER_SCRIPTS_VERSION"], [PostGIS Raster scripts version])
-
-	AC_SUBST([POSTGIS_RASTER_VERSION])
-	AC_SUBST([POSTGIS_RASTER_LIB_VERSION])
-	AC_SUBST([POSTGIS_RASTER_BUILD_DATE])
-	AC_SUBST([POSTGIS_RASTER_SCRIPTS_VERSION])
 
 	dnl ===========================================================================
 	dnl Allow output of double truncation warnings with --with-raster-dblwarning

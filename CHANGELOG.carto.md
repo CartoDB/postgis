@@ -1,3 +1,10 @@
+## 3.0.2.1+carto-1
+
+**Release date**: 2020-XX-XX
+
+Changes:
+- Update from `stable-3.0` up to 2020-04-27 (b0f8ee98653e6f5c8ea08c81d009ebfb15dd16bf)
+
 ## 3.0.1.2+carto-1
 
 **Release date**: 2020-01-15

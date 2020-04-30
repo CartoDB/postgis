@@ -1,7 +1,7 @@
 #ifndef _LWPGIS_DEFINES
 #define _LWPGIS_DEFINES
 
-#include "../postgis_svn_revision.h"
+#include "../postgis_revision.h"
 
 /*
  * Define just the version numbers; otherwise we get some strange substitutions in postgis.sql.in
@@ -31,8 +31,8 @@
  */
 #if POSTGIS_PGSQL_VERSION >= 120
 #define _COST_DEFAULT COST 1
-#define _COST_LOW COST 100
-#define _COST_MEDIUM COST 1000
+#define _COST_LOW COST 50
+#define _COST_MEDIUM COST 500
 #define _COST_HIGH COST 10000
 #else
 #define _COST_DEFAULT COST 1
@@ -50,8 +50,8 @@
 #define _POSTGIS_SQL_SELECT_POSTGIS_BUILD_DATE 'SELECT ''@POSTGIS_BUILD_DATE@''::text AS version'
 #define _POSTGIS_SQL_SELECT_POSTGIS_PGSQL_VERSION 'SELECT ''@POSTGIS_PGSQL_VERSION@''::text AS version'
 
-#ifdef POSTGIS_SVN_REVISION
-#define _POSTGIS_SQL_SELECT_POSTGIS_SCRIPTS_VERSION $$ SELECT '@POSTGIS_SCRIPTS_VERSION@'::text || ' r' || POSTGIS_SVN_REVISION::text AS version $$
+#ifdef POSTGIS_REVISION
+#define _POSTGIS_SQL_SELECT_POSTGIS_SCRIPTS_VERSION $$ SELECT trim('@POSTGIS_SCRIPTS_VERSION@'::text || $rev$ POSTGIS_REVISION $rev$) AS version $$
 #else
 #define _POSTGIS_SQL_SELECT_POSTGIS_SCRIPTS_VERSION $$ SELECT '@POSTGIS_SCRIPTS_VERSION@'::text AS version $$
 #endif
