@@ -3,7 +3,8 @@
 **Release date**: 2020-XX-XX
 
 Changes:
-- Update from `stable-3.0` up to 2020-04-27 (b0f8ee98653e6f5c8ea08c81d009ebfb15dd16bf)
+- Update from `stable-3.0` up to 2020-08-21 (https://github.com/postgis/postgis/commit/11846bd1f7bf5df07b6919d0ebba0aacc45d82f1).
+- Backport (from master) improvements in MVTs (https://github.com/postgis/postgis/commit/99c50d4602a6e1d94f65932cbcbee933af998ea1).
 
 ## 3.0.1.2+carto-1
 
