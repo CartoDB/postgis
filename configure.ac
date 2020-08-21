@@ -874,15 +874,18 @@ if test ! "x$PROJDIR" = "x"; then
 		fi
 	fi
 elif test ! -z "$PKG_CONFIG"; then
-        dnl To keep compatibility with PROJ pre 4.8, default to lproj if not found
+	dnl To keep compatibility with PROJ pre 4.8, default to lproj if not found
 	PKG_CHECK_MODULES([PROJ], [proj],
-            [
-                PROJ_CPPFLAGS="$PROJ_CFLAGS"
-                PROJ_LDFLAGS="$PROJ_LIBS"
-            ],
-            [
-                PROJ_LDFLAGS="-lproj"
-            ])
+		[
+			PROJ_CPPFLAGS="$PROJ_CFLAGS"
+			PROJ_LDFLAGS="$PROJ_LIBS"
+		],
+		[
+			PROJ_LDFLAGS="-lproj"
+		])
+else
+	dnl To keep compatibility with PROJ pre 4.8, default to lproj
+	PROJ_LDFLAGS="-lproj"
 fi
 
 
@@ -967,7 +970,7 @@ if test "$CHECK_JSON" != "no"; then
                 HAVE_JSON=yes
                 JSON_CPPFLAGS="$JSONC_CFLAGS"
                 JSON_LDFLAGS="$JSONC_LIBS"
-            ], [])
+            ], [AC_MSG_WARN("Could not find json-c")])
     fi
 
     if test "$HAVE_JSON" = "yes"; then
