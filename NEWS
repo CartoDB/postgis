@@ -1,7 +1,17 @@
-PostGIS 3.0.3
+PostGIS 3.0.3dev
 2020/xx/xx
+
 * Bug Fixes and Enhancements *
   - #4742 tiger geocoder reverted to 2018 version on tiger upgrade
+  - #4757, Handle line collapse due to snap-to-existing node (Sandro Santilli)
+  - #4758, Improve topology noding robustness (Sandro Santilli)
+  - #4719, Fail fast when srids don't match ST_Intersection(geometry,raster)
+           Also schema qualify calls in function. (Regina Obe)
+  - #4739, Ensure all functions using postgis_oid initialize the internal cache (Raúl Marín)
+  - #4767, #4768, #4771, #4772, Fix segfault when parsing invalid WKB (Raúl Marín)
+  - #4769, Fix segfault in st_addband (Raúl Marín)
+  - #4748, Fix incorrect axis swapping in polar stereographic (Paul Ramsey)
+  - #4727, Fix bug in geocentrix box computation (Paul Ramsey)
 
 PostGIS 3.0.2
 2020/08/15
