@@ -1,10 +1,19 @@
-## 3.0.2.1+carto-1
+## 3.0.2.2+carto-1
 
-**Release date**: 2020-XX-XX
+**Release date**: 2020-11-10
 
 Changes:
-- Update from `stable-3.0` up to 2020-08-21 (https://github.com/postgis/postgis/commit/11846bd1f7bf5df07b6919d0ebba0aacc45d82f1).
+- Update from `stable-3.0` up to 2020-10-11 (https://github.com/postgis/postgis/commit/7b6d177b97555fb5918aab553c56eea1dc387699).
 - Backport (from master) improvements in MVTs (https://github.com/postgis/postgis/commit/99c50d4602a6e1d94f65932cbcbee933af998ea1).
+- Match MVT files to current master/HEAD ([2020-10-11](https://github.com/postgis/postgis/commit/a55328fe58bfec202f12cfa0e831dc3cf5b8e665)).
+
+## 3.0.2.1+carto-1
+
+**Release date**: 2020-04-30
+
+Changes:
+- Update from `stable-3.0` up to 2020-04-27.
+- Update function costs (https://github.com/CartoDB/postgis/pull/69/commits/b0f8ee98653e6f5c8ea08c81d009ebfb15dd16bf).
 
 ## 3.0.1.2+carto-1
 
